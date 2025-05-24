@@ -1,155 +1,191 @@
-
-// install from apt-get: libusb-1.0.0-dev
-#include <libusb-1.0/libusb.h> 
+// install libusb-1.0 from dpkg
+#include <libusb-1.0/libusb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <string.h>
 
 
-#define TRUSTED_FILE "trusted_devices.txt"
-
-
-void usb_device_detected()
+static int new_device_detected_cb(libusb_context * ctx, libusb_device * device, 
+                                libusb_hotplug_event event, void *user_data)
 {
-    libusb_device ** devices;
-    libusb_context *context;
-    int r;
-    ssize_t cnt;
 
-    r = libusb_init(&context);
-    if (r < 0)
-    {
-        printf("Fail to initialize libusb.\n");
-        return;
-    }
 
-    cnt = libusb_get_device_list(context, &devices);
-    if (cnt < 0) {
-        printf("Error getting device list\n");
-        return;
-    }
 
-    for (ssize_t i = 0; i < cnt; i++) 
-    {
-        struct libusb_device_descriptor desc;
-        libusb_device *device = devices[i];
-        r = libusb_get_device_descriptor(device, &desc);
-        if (r < 0) continue;
 
-        int is_mass_storage = 0;
 
-        if (desc.bDeviceClass == LIBUSB_CLASS_MASS_STORAGE) {
-            is_mass_storage = 1;
-        } 
-        else if (desc.bDeviceClass == 0x00) {
-            // Device class unspecified, 확인 필요
-            struct libusb_config_descriptor *config;
-            r = libusb_get_config_descriptor(device, 0, &config);
-            if (r == 0) {
-                for (int i = 0; i < config->bNumInterfaces && !is_mass_storage; i++) {
-                    const struct libusb_interface *interface = &config->interface[i];
-                    for (int j = 0; j < interface->num_altsetting && !is_mass_storage; j++) {
-                        const struct libusb_interface_descriptor *inter_desc = &interface->altsetting[j];
-                        if (inter_desc->bInterfaceClass == LIBUSB_CLASS_MASS_STORAGE) {
-                            printf("TEST\n");
-                            is_mass_storage = 1;
-                            break;
-                        }
-                    }
-                }
-                libusb_free_config_descriptor(config);
-            }
-        }
-
-        if (is_mass_storage) 
-        {
-            printf("Mass Storage USB device detected (Vendor ID: %04x, Product ID: %04x)\n", desc.idVendor, desc.idProduct);
-        }
-    }
+    return 0;
 }
 
-
-int main(int argc, char * argv []) 
+int main(int argc, char * argv [])
 {
-    usb_device_detected();
-    return 0;
+    libusb_context * ctx = NULL ;
+    libusb_hotplug_callback_handle handler;
+    
+    // init libusb library context: success(0), Failure(< 0)
+    if (libusb_init(&ctx) != LIBUSB_SUCCESS)
+    {
+        fprintf(stderr, "[ERROR] Fail to initailize libusb context\n");
+        libusb_exit(ctx);
+        return EXIT_FAILURE;
+    }
+
+    // Check the platform provides Hotplug or not: Support(1), Not Support(0)
+    if (!libusb_has_capability(LIBUSB_CAP_HAS_CAPABILITY))
+    {
+        fprint(stderr, "[ERROR] This libusb library does not provide hotplug.\n");
+        libusb_exit(ctx);
+        return EXIT_FAILURE;
+    }
+
+    int result =libusb_hotplug_register_callback(ctx, 
+                                                 LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED, 
+                                                 0, \
+                                                 LIBUSB_HOTPLUG_MATCH_ANY, 
+                                                 LIBUSB_HOTPLUG_MATCH_ANY, 
+                                                 LIBUSB_HOTPLUG_MATCH_ANY, 
+                                                 new_device_detected_cb,
+                                                 NULL, \
+                                                 handler);
+
+    if (result == LIBUSB_SUCCESS)
+    {
+        fprintf(stderr, "Error registering hotplug callback\n");
+        libusb_exit(ctx);
+        return EXIT_FAILURE;
+    }
+
+    printf("Listening for USB mass storage devices...\n");
+
+    // Event Listening.
+    while (1) 
+    {
+        int result = libusb_handle_events_completed(ctx, NULL);
+    }
+
+    libusb_close(ctx);
+    return EXIT_SUCCESS;
 }
 
 
 /*
-void save_trusted_device(uint16_t vendor_id, uint16_t product_id) {
-    FILE *fp = fopen(TRUSTED_FILE, "a");
-    if (fp != NULL) {
-        fprintf(fp, "%04x:%04x\n", vendor_id, product_id);
-        fclose(fp);
-        printf("Device saved to trusted list.\n");
-    } else {
-        printf("Failed to save trusted device.\n");
-    }
-}
+static int hotplug_callback(struct libusb_context *ctx, struct libusb_device *dev,
+                            libusb_hotplug_event event, void *user_data) 
+{
+    struct libusb_device_descriptor desc;
+    libusb_device_handle *handle = NULL;
+    char manufacturer[64], product[64], serial[64];
 
-void usb_device_detected() {
-    libusb_device **devices;
-    libusb_context *context = NULL;
-    int r;
-    ssize_t cnt;
-
-    r = libusb_init(&context);
-    if (r < 0) {
-        printf("libusb initialization failed\n");
-        return;
+    if (event != LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED) {
+        return 0;
     }
 
-    cnt = libusb_get_device_list(context, &devices);
-    if (cnt < 0) {
-        printf("Error getting device list\n");
-        return;
+    int r = libusb_get_device_descriptor(dev, &desc);
+    if (r != LIBUSB_SUCCESS) {
+        fprintf(stderr, "Failed to get device descriptor\n");
+        return 0;
     }
 
-    for (ssize_t i = 0; i < cnt; i++) {
-        struct libusb_device_descriptor desc;
-        libusb_device *device = devices[i];
+    // Mass Storage class is 0x08
+    if (desc.bDeviceClass != LIBUSB_CLASS_PER_INTERFACE) {
+        return 0;
+    }
 
-        r = libusb_get_device_descriptor(device, &desc);
-        if (r < 0) {
-            continue;
-        }
+    struct libusb_config_descriptor *config;
+    r = libusb_get_config_descriptor(dev, 0, &config);
+    if (r != LIBUSB_SUCCESS) {
+        fprintf(stderr, "Failed to get config descriptor\n");
+        return 0;
+    }
 
-        printf("USB device detected (Vendor ID: %04x, Product ID: %04x)\n", desc.idVendor, desc.idProduct);
-
-        char response;
-        printf("Do you trust this device? (y/n): ");
-        scanf(" %c", &response);
-
-        if (response == 'y' || response == 'Y') {
-            printf("Launching password verification...\n");
-
-            // Python 또는 Ruby 버전 중 택1
-            int pw_result = system("python3 check_password.py"); // Python
-            // int pw_result = system("ruby check_password.rb"); // Ruby
-
-            if (pw_result == 0) {
-                save_trusted_device(desc.idVendor, desc.idProduct);
-            } else {
-                printf("Password incorrect. Device not trusted.\n");
+    int is_mass_storage = 0;
+    for (int i = 0; i < config->bNumInterfaces; i++) {
+        const struct libusb_interface *interface = &config->interface[i];
+        for (int j = 0; j < interface->num_altsetting; j++) {
+            const struct libusb_interface_descriptor *altsetting = &interface->altsetting[j];
+            if (altsetting->bInterfaceClass == LIBUSB_CLASS_MASS_STORAGE) {
+                is_mass_storage = 1;
+                break;
             }
-        } else {
-            printf("Device not trusted. Access denied.\n");
         }
     }
 
-    libusb_free_device_list(devices, 1);
-    libusb_exit(context);
-}
+    libusb_free_config_descriptor(config);
 
-int main() {
-    while (1) {
-        usb_device_detected();
-        sleep(5);
+    if (!is_mass_storage) {
+        return 0;
     }
+
+    r = libusb_open(dev, &handle);
+    if (r != LIBUSB_SUCCESS) {
+        fprintf(stderr, "[WARNING] Need root permission or access error\n");
+        return 0;
+    }
+
+    if (desc.iManufacturer)
+        libusb_get_string_descriptor_ascii(handle, desc.iManufacturer, manufacturer, sizeof(manufacturer));
+    else
+        strcpy(manufacturer, "Unknown");
+
+    if (desc.iProduct)
+        libusb_get_string_descriptor_ascii(handle, desc.iProduct, product, sizeof(product));
+    else
+        strcpy(product, "Unknown");
+
+    if (desc.iSerialNumber)
+        libusb_get_string_descriptor_ascii(handle, desc.iSerialNumber, serial, sizeof(serial));
+    else
+        strcpy(serial, "Unknown");
+
+    printf("\n[USB DEVICE CONNECTED]\n");
+    printf("Product     : %s\n", product);
+    printf("Manufacturer: %s\n", manufacturer);
+    printf("Serial Num  : %s\n", serial);
+    printf("VID:PID     : %04x:%04x\n", desc.idVendor, desc.idProduct);
+
+    libusb_close(handle);
     return 0;
 }
 
+int main(void) 
+{
+    libusb_context *ctx = NULL;
+    libusb_hotplug_callback_handle hp_handle;
 
+    if (libusb_init(&ctx) != LIBUSB_SUCCESS) {
+        fprintf(stderr, "libusb init failed\n");
+        return EXIT_FAILURE;
+    }
+
+    if (!libusb_has_capability(LIBUSB_CAP_HAS_HOTPLUG)) {
+        fprintf(stderr, "Hotplug not supported on this platform\n");
+        libusb_exit(ctx);
+        return EXIT_FAILURE;
+    }
+
+    int rc = libusb_hotplug_register_callback(ctx,
+                                              LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED,
+                                              0,
+                                              LIBUSB_HOTPLUG_MATCH_ANY,
+                                              LIBUSB_HOTPLUG_MATCH_ANY,
+                                              LIBUSB_HOTPLUG_MATCH_ANY,
+                                              hotplug_callback,
+                                              NULL,
+                                              &hp_handle);
+
+    if (rc != LIBUSB_SUCCESS) {
+        fprintf(stderr, "Error registering hotplug callback\n");
+        libusb_exit(ctx);
+        return EXIT_FAILURE;
+    }
+
+    printf("Listening for USB mass storage devices...\n");
+
+    // Main event loop
+    while (1) {
+        libusb_handle_events_completed(ctx, NULL);
+    }
+
+    libusb_exit(ctx);
+    return EXIT_SUCCESS;
+}
 */

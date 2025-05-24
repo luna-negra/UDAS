@@ -1,2 +1,8 @@
-.idea
-.vscode
+*
+!main.py
+!.gitignore
+!src
+!src/c
+!src/c/*.c
+!src/python/
+!header/

@@ -1,19 +1,74 @@
-// install libusb-1.0 from dpkg
-#include <libusb-1.0/libusb.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "./udas_detector.h"
 
 
 static int new_device_detected_cb(libusb_context * ctx, libusb_device * device, 
                                 libusb_hotplug_event event, void *user_data)
 {
+    int is_mass_storage = 0;
 
+    // declare device descriptor struct.
+    struct libusb_device_descriptor desc;
 
+    // get newly connected device' descriptor: success(0), fail(minus int)
+    int r = libusb_get_device_descriptor(device, &desc);
 
+    if ((r != LIBUSB_SUCCESS) || (&desc == NULL)) {
+        fprintf(stderr, "[ERROR] Can not get a device descriptor\n");
+        return EXIT_SUCCESS;
+    }
 
+    // check 0x80 for desc.bDeviceClass
 
-    return 0;
+    // get detail information for 0x00
+    if (desc.bDeviceClass == 0x00) {
+        // declare device config descriptor struct.
+        struct libusb_config_descriptor * cfg_desc = NULL;
+
+        // get device first config information (usually one config). success(0), fail(minux int)
+        r = libusb_get_config_descriptor(device, 0, &cfg_desc);
+        
+        if ((r != LIBUSB_SUCCESS) || (cfg_desc == NULL)) {
+            fprintf(stderr, "[ERROR] Can not get a device config.\n");
+            return EXIT_SUCCESS; 
+        }
+
+        // loop to get USB interface information.
+        for (int i = 0; i < cfg_desc->bNumInterfaces; i++) {
+            // declare interface struct to get altsettings in device.
+            const struct libusb_interface * inf = (&cfg_desc->interface)[i];
+
+            // to get interface descriptor, search altsettings information.
+            for (int j = 0; j < inf->num_altsetting; j++) {
+
+                // declare interface descriptor struct
+                struct libusb_interface_descriptor inf_desc = (inf->altsetting)[j];
+                
+                if (inf_desc.bInterfaceClass == 0x08) {
+                    fprintf(stdout, "[INFO] New USB storage is connected.\n");
+                    is_mass_storage = 1;
+                    break;
+                }
+            }
+        }
+
+        libusb_free_config_descriptor(cfg_desc);
+    }
+    else if (desc.bDeviceClass == 0x08) {
+        fprintf(stdout, "[INFO] New USB storage is connected.\n");
+        is_mass_storage = 1;
+    }
+
+    if (is_mass_storage)
+    {
+        printf("check udev rule\n");
+        // device, desc 전달인자 함수 생성
+        // 해당 함수 내에서 디바이스 오픈 후, USB 정보를 출력 및 struct 저장 후 반환. 
+
+        // 반환 struct를 인자로 하는 함수에서 rule 확인.
+        // Rule이 없는 경우, Python window 실행
+    }
+    
+    return EXIT_SUCCESS;
 }
 
 int main(int argc, char * argv [])
@@ -32,24 +87,24 @@ int main(int argc, char * argv [])
     // Check the platform provides Hotplug or not: Support(1), Not Support(0)
     if (!libusb_has_capability(LIBUSB_CAP_HAS_CAPABILITY))
     {
-        fprint(stderr, "[ERROR] This libusb library does not provide hotplug.\n");
+        fprintf(stderr, "[ERROR] This libusb library does not provide hotplug.\n");
         libusb_exit(ctx);
         return EXIT_FAILURE;
     }
 
     int result =libusb_hotplug_register_callback(ctx, 
                                                  LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED, 
-                                                 0, \
+                                                 0, 
                                                  LIBUSB_HOTPLUG_MATCH_ANY, 
                                                  LIBUSB_HOTPLUG_MATCH_ANY, 
                                                  LIBUSB_HOTPLUG_MATCH_ANY, 
                                                  new_device_detected_cb,
-                                                 NULL, \
-                                                 handler);
+                                                 NULL, 
+                                                 &handler);
 
-    if (result == LIBUSB_SUCCESS)
+    if (result != LIBUSB_SUCCESS)
     {
-        fprintf(stderr, "Error registering hotplug callback\n");
+        fprintf(stderr, "[ERROR] Fail to registering hotplug callback\n");
         libusb_exit(ctx);
         return EXIT_FAILURE;
     }
@@ -62,7 +117,7 @@ int main(int argc, char * argv [])
         int result = libusb_handle_events_completed(ctx, NULL);
     }
 
-    libusb_close(ctx);
+    libusb_exit(ctx);
     return EXIT_SUCCESS;
 }
 
@@ -71,44 +126,6 @@ int main(int argc, char * argv [])
 static int hotplug_callback(struct libusb_context *ctx, struct libusb_device *dev,
                             libusb_hotplug_event event, void *user_data) 
 {
-    struct libusb_device_descriptor desc;
-    libusb_device_handle *handle = NULL;
-    char manufacturer[64], product[64], serial[64];
-
-    if (event != LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED) {
-        return 0;
-    }
-
-    int r = libusb_get_device_descriptor(dev, &desc);
-    if (r != LIBUSB_SUCCESS) {
-        fprintf(stderr, "Failed to get device descriptor\n");
-        return 0;
-    }
-
-    // Mass Storage class is 0x08
-    if (desc.bDeviceClass != LIBUSB_CLASS_PER_INTERFACE) {
-        return 0;
-    }
-
-    struct libusb_config_descriptor *config;
-    r = libusb_get_config_descriptor(dev, 0, &config);
-    if (r != LIBUSB_SUCCESS) {
-        fprintf(stderr, "Failed to get config descriptor\n");
-        return 0;
-    }
-
-    int is_mass_storage = 0;
-    for (int i = 0; i < config->bNumInterfaces; i++) {
-        const struct libusb_interface *interface = &config->interface[i];
-        for (int j = 0; j < interface->num_altsetting; j++) {
-            const struct libusb_interface_descriptor *altsetting = &interface->altsetting[j];
-            if (altsetting->bInterfaceClass == LIBUSB_CLASS_MASS_STORAGE) {
-                is_mass_storage = 1;
-                break;
-            }
-        }
-    }
-
     libusb_free_config_descriptor(config);
 
     if (!is_mass_storage) {
@@ -144,48 +161,5 @@ static int hotplug_callback(struct libusb_context *ctx, struct libusb_device *de
 
     libusb_close(handle);
     return 0;
-}
-
-int main(void) 
-{
-    libusb_context *ctx = NULL;
-    libusb_hotplug_callback_handle hp_handle;
-
-    if (libusb_init(&ctx) != LIBUSB_SUCCESS) {
-        fprintf(stderr, "libusb init failed\n");
-        return EXIT_FAILURE;
-    }
-
-    if (!libusb_has_capability(LIBUSB_CAP_HAS_HOTPLUG)) {
-        fprintf(stderr, "Hotplug not supported on this platform\n");
-        libusb_exit(ctx);
-        return EXIT_FAILURE;
-    }
-
-    int rc = libusb_hotplug_register_callback(ctx,
-                                              LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED,
-                                              0,
-                                              LIBUSB_HOTPLUG_MATCH_ANY,
-                                              LIBUSB_HOTPLUG_MATCH_ANY,
-                                              LIBUSB_HOTPLUG_MATCH_ANY,
-                                              hotplug_callback,
-                                              NULL,
-                                              &hp_handle);
-
-    if (rc != LIBUSB_SUCCESS) {
-        fprintf(stderr, "Error registering hotplug callback\n");
-        libusb_exit(ctx);
-        return EXIT_FAILURE;
-    }
-
-    printf("Listening for USB mass storage devices...\n");
-
-    // Main event loop
-    while (1) {
-        libusb_handle_events_completed(ctx, NULL);
-    }
-
-    libusb_exit(ctx);
-    return EXIT_SUCCESS;
 }
 */

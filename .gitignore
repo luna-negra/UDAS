@@ -4,5 +4,6 @@
 !src
 !src/c
 !src/c/*.c
+!src/c/*.h
 !src/python/
 !header/

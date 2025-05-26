@@ -3,8 +3,7 @@
 !.gitignore
 !src
 !src/c
-!src/c/pthread_test.c
-!src/c/test.c
+!src/c/*.c
 !src/c/*.h
 !src/python/
 !header/

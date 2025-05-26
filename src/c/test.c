@@ -42,6 +42,8 @@ void * work_thread(void * arg)
         libusb_device * device = dequeue(usb_dev);
         libusb_device_handle * handler = NULL;
         libusb_device_descriptor desc ;
+        struct libusb_config_descriptor * cfg_desc = NULL;
+        const struct libusb_interface * infc = NULL;
         USB_INFO usb_info; 
         usb_info.result = 0;
         
@@ -57,7 +59,6 @@ void * work_thread(void * arg)
             if (desc.bDeviceClass == 0x08) is_mass_storage = 1;
             else if (desc.bDeviceClass == 0x00) 
             {
-                struct libusb_config_descriptor * cfg_desc = NULL;
                 if (libusb_get_config_descriptor(device, 0, &cfg_desc) != EXIT_SUCCESS)
                 {
                     fprintf(stdout, "[WARNING] Fail to read config descriptor of USB Device.\n");
@@ -66,7 +67,7 @@ void * work_thread(void * arg)
 
                 for (int i = 0 ; i < cfg_desc->bNumInterfaces ; i++)
                 {
-                    const struct libusb_interface * infc = &((cfg_desc->interface)[i]);
+                    infc = &((cfg_desc->interface)[i]);
                     for (int j = 0 ; j < infc->num_altsetting; j++)
                     {
                         if ((infc->altsetting->bInterfaceClass == 0x08) || (infc->altsetting->bInterfaceClass == 0x06))
@@ -81,7 +82,9 @@ void * work_thread(void * arg)
 
             if (!is_mass_storage) 
             {
-                fprintf(stdout, "[INFO] Non Storage USB device is connected.\n");
+                (infc != NULL) ?  
+                fprintf(stdout, "[INFO] Non Storage USB device (%04x) is connected.\n", infc->altsetting->bInterfaceClass): 
+                fprintf(stdout, "[INFO] Non Storage USB device (%04x) is connected.\n", desc.bDeviceClass);
                 continue;
             }
 
@@ -91,7 +94,7 @@ void * work_thread(void * arg)
             // check libusb status.
             if (r == LIBUSB_ERROR_ACCESS)
             {
-                fprintf(stdout, "[ERROR] Need root or sudo privilege to check USB device. Process will be terminated.\n");
+                fprintf(stderr, "[ERROR] Need root or sudo privilege to check USB device. Process will be terminated.\n");
                 exit(-1);
             }
             else if (r != 0)
@@ -126,12 +129,14 @@ void * work_thread(void * arg)
                 usb_info.manufacture, usb_info.manufacture_id, usb_info.product, usb_info.product_id, usb_info.serialnum
             );
 
+            // close libusb.
+            libusb_close(handler);
             // read udev rules.
         }
         else sleep(1);
     }
 
-    fprintf(stdout, "[ERROR] Thread for real time detecting was terminated.\n");
+    fprintf(stderr, "[ERROR] Thread for real time detecting was terminated.\n");
     exit(-1);
 }
 

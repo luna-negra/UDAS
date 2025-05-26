@@ -32,6 +32,47 @@ void enqueue(libusb_device ** device, libusb_context ** ctx, USBDEV ** usb_dev)
     return;
 }
 
+USB_INFO get_usb_dev(libusb_device * device, libusb_device_descriptor * desc)
+{
+    libusb_device_handle * handler = NULL;
+    USB_INFO usb_info ;
+    usb_info.result = 0;
+
+    // open libusb for newly connected USB storage.
+    int r = libusb_open(device, &handler);
+    
+    // check libusb status.
+    if (r == LIBUSB_ERROR_ACCESS)
+    {
+        fprintf(stderr, "[ERROR] Need root or sudo privilege to check USB device. Process will be terminated.\n");
+        exit(-1);
+    }
+    else if (r != 0)
+    {
+        fprintf(stdout, "[WARNING] Can not open libusb for new USB storage\n");
+        return usb_info;
+    }
+
+    if (libusb_get_string_descriptor_ascii(handler, desc->iManufacturer, usb_info.manufacture, sizeof(usb_info.manufacture)) < 2) strcpy(usb_info.manufacture, "Unknown");
+    if (libusb_get_string_descriptor_ascii(handler, desc->iProduct, usb_info.product, sizeof(usb_info.product)) < 2) strcpy(usb_info.product, "Unknown");
+    if (libusb_get_string_descriptor_ascii(handler, desc->iSerialNumber, usb_info.serialnum, sizeof(usb_info.serialnum)) < 2) strcpy(usb_info.serialnum, "Unknown");
+    if (libusb_get_string_descriptor_ascii(handler, desc->bcdUSB, usb_info.version, sizeof(usb_info.version)) < 2) strcpy(usb_info.version, "Unknown");
+    usb_info.product_id = desc->idProduct;
+    usb_info.manufacture_id = desc->idVendor;
+    usb_info.result = 1;
+    
+    fprintf(
+        stdout, 
+        "[INFO] New USB Storage is connected - Vendor: %s (%04x), Product: %s (%04x), SerialNum: %s\n", 
+        usb_info.manufacture, usb_info.manufacture_id, usb_info.product, usb_info.product_id, usb_info.serialnum
+    );
+
+    // close libusb.
+    libusb_close(handler);
+    
+    return usb_info;
+}
+
 void * work_thread(void * arg)
 {
     USBDEV ** usb_dev = (USBDEV**)&(arg);
@@ -40,12 +81,10 @@ void * work_thread(void * arg)
     {
         int is_mass_storage = 0;
         libusb_device * device = dequeue(usb_dev);
-        libusb_device_handle * handler = NULL;
         libusb_device_descriptor desc ;
         struct libusb_config_descriptor * cfg_desc = NULL;
         const struct libusb_interface * infc = NULL;
         USB_INFO usb_info; 
-        usb_info.result = 0;
         
         if (device != NULL)
         {            
@@ -88,50 +127,13 @@ void * work_thread(void * arg)
                 continue;
             }
 
-            // open libusb for newly connected USB storage.
-            int r = libusb_open(device, &handler);
-            
-            // check libusb status.
-            if (r == LIBUSB_ERROR_ACCESS)
-            {
-                fprintf(stderr, "[ERROR] Need root or sudo privilege to check USB device. Process will be terminated.\n");
-                exit(-1);
-            }
-            else if (r != 0)
-            {
-                fprintf(stdout, "[WARNING] Can not open libusb for new USB storage\n");
-                continue;
-            }
+            // fprint the device info.
+            usb_info = get_usb_dev(device, &desc);
+            usb_info.device_class = infc->altsetting->bInterfaceClass;
 
-            if (libusb_get_string_descriptor_ascii(handler, desc.iManufacturer, usb_info.manufacture, sizeof(usb_info.manufacture)) < 2)
-            {
-                strcpy(usb_info.manufacture, "Unknown");
-            }
-            if (libusb_get_string_descriptor_ascii(handler, desc.iProduct, usb_info.product, sizeof(usb_info.product)) < 2)
-            {
-                strcpy(usb_info.product, "Unknown");
-            }
-            if (libusb_get_string_descriptor_ascii(handler, desc.iSerialNumber, usb_info.serialnum, sizeof(usb_info.serialnum)) < 2)
-            {
-                strcpy(usb_info.serialnum, "Unknown");
-            }
-            if (libusb_get_string_descriptor_ascii(handler, desc.bcdUSB, usb_info.version, sizeof(usb_info.version)) < 2)
-            {
-                strcpy(usb_info.version, "Unknown");
-            }
-            usb_info.product_id = desc.idProduct;
-            usb_info.manufacture_id = desc.idVendor;
-            usb_info.result = 1;
+            // read udev rules. 
             
-            fprintf(
-                stdout, 
-                "[INFO] New USB Storage is connected - Vendor: %s (%04x), Product: %s (%04x), SerialNum: %s\n", 
-                usb_info.manufacture, usb_info.manufacture_id, usb_info.product, usb_info.product_id, usb_info.serialnum
-            );
 
-            // close libusb.
-            libusb_close(handler);
-            // read udev rules.
         }
         else sleep(1);
     }
@@ -143,11 +145,7 @@ void * work_thread(void * arg)
 int hotplug_fn(libusb_context *ctx, libusb_device *device, libusb_hotplug_event event, void *user_data)
 {
     USBDEV * usb_dev = (USBDEV *)user_data;
-    if (event == LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED)
-    {
-        enqueue(&device, &ctx, &usb_dev);
-    }
-
+    if (event == LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED) enqueue(&device, &ctx, &usb_dev);
     return EXIT_SUCCESS;
 }
 

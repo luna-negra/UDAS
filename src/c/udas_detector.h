@@ -24,6 +24,7 @@ EXIT_FAILURE: 1
         char product[32];
         char serialnum[32];
         char version[32];
+        uint16_t device_class;
         uint16_t manufacture_id;
         uint16_t product_id;
     } USB_INFO ;

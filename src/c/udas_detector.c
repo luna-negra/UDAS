@@ -131,8 +131,7 @@ void * work_thread(void * arg)
             usb_info = get_usb_dev(device, &desc);
             usb_info.device_class = infc->altsetting->bInterfaceClass;
 
-            // read udev rules. 
-            
+            // read udev rules and find
 
         }
         else sleep(1);

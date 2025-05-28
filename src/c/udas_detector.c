@@ -132,6 +132,22 @@ void * work_thread(void * arg)
             usb_info.device_class = infc->altsetting->bInterfaceClass;
 
             // read udev rules and find
+            // test
+            pid_t process_udas = fork();
+            
+            if (process_udas == -1)
+            {
+                fprintf(stderr, "[ERROR] Fail to create child process\n");
+            }
+            else if (process_udas == 0)
+            {
+                FILE * cmd = popen("echo 'Hello World'", "r");
+                
+                pclose(cmd);
+            }
+
+
+
 
         }
         else sleep(1);

@@ -14,6 +14,7 @@ EXIT_FAILURE: 1
     #include <string.h>
     #include <unistd.h>
     #include <pthread.h>
+    #include <sys/types.h>
 
     #define Q_LEN 16
     

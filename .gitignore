@@ -3,6 +3,7 @@
 !.gitignore
 !src
 !src/c
-!src/c/udas_detector*
+!src/c/udas.*
+!src/c/udas_detector.*
 !src/python/
 !header/

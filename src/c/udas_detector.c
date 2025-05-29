@@ -134,6 +134,8 @@ void * work_thread(void * arg)
             // read udev rules and find
             // test
             pid_t process_udas = fork();
+            char command[256];
+            char command_result[128];
             
             if (process_udas == -1)
             {
@@ -141,8 +143,25 @@ void * work_thread(void * arg)
             }
             else if (process_udas == 0)
             {
-                FILE * cmd = popen("echo 'Hello World'", "r");
+                snprintf(
+                    command, 
+                    sizeof(command), 
+                    "./udas td add --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s", 
+                    usb_info.manufacture_id,
+                    usb_info.product_id,
+                    usb_info.serialnum,
+                    usb_info.manufacture,
+                    usb_info.product
+                );
+                FILE * cmd = popen(command, "r");
+                printf("COMMAND: %s\n", command);
                 
+                while (fgets(command_result, sizeof(command_result), cmd) != NULL)
+                {
+                    printf("%s\n", command_result);
+                }
+
+
                 pclose(cmd);
             }
 

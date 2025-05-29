@@ -73,6 +73,55 @@ USB_INFO get_usb_dev(libusb_device * device, libusb_device_descriptor * desc)
     return usb_info;
 }
 
+int register_new_device(USB_INFO * usb_info)
+{
+    int cmd_result = -1;
+    char command[256];
+
+    // create command to register new usb storage device to udev rule file
+    if (snprintf(command, 
+            sizeof(command), 
+            "./udas td add --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s", 
+            usb_info->manufacture_id,
+            usb_info->product_id,
+            usb_info->serialnum,
+            usb_info->manufacture,
+            usb_info->product) < 0)
+    {
+        fprintf(stderr, "[ERROR] Fail to create UDAS command\n");
+        return EXIT_FAILURE;
+    }
+
+    cmd_result = system(command);
+    return cmd_result;    
+}
+
+int search_device(USB_INFO * usb_info)
+{
+    int cmd_result = -1;
+    char command[256];
+
+    // create command to register new usb storage device to udev rule file
+    if (snprintf(command, 
+            sizeof(command), 
+            "./udas td search --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s", 
+            usb_info->manufacture_id,
+            usb_info->product_id,
+            usb_info->serialnum,
+            usb_info->manufacture,
+            usb_info->product) < 0)
+    {
+        fprintf(stderr, "[ERROR] Fail to create UDAS command\n");
+        return EXIT_FAILURE;
+    }
+
+    cmd_result = system(command);
+    printf("%d\n", cmd_result);
+    
+
+    return EXIT_SUCCESS;
+}
+
 void * work_thread(void * arg)
 {
     USBDEV ** usb_dev = (USBDEV**)&(arg);
@@ -132,10 +181,9 @@ void * work_thread(void * arg)
             usb_info.device_class = infc->altsetting->bInterfaceClass;
 
             // read udev rules and find
-            // test
+            // create udas process to search newly connected USB device in udev rule file.
             pid_t process_udas = fork();
-            char command[256];
-            char command_result[128];
+            int cmd_result = -1;            
             
             if (process_udas == -1)
             {
@@ -143,26 +191,9 @@ void * work_thread(void * arg)
             }
             else if (process_udas == 0)
             {
-                snprintf(
-                    command, 
-                    sizeof(command), 
-                    "./udas td add --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s", 
-                    usb_info.manufacture_id,
-                    usb_info.product_id,
-                    usb_info.serialnum,
-                    usb_info.manufacture,
-                    usb_info.product
-                );
-                FILE * cmd = popen(command, "r");
-                printf("COMMAND: %s\n", command);
-                
-                while (fgets(command_result, sizeof(command_result), cmd) != NULL)
-                {
-                    printf("%s\n", command_result);
-                }
 
-
-                pclose(cmd);
+                //cmd_result = register_new_device(&usb_info);
+                cmd_result = search_device(&usb_info);
             }
 
 

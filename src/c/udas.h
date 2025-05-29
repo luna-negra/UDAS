@@ -14,12 +14,15 @@
         char idProduct[8];
     } USB_DEV;
 
-    #define UNKNOWN "Unknown"
+    #define CUSTOM_DEFAULT_RULE "/etc/udev/rules.d/99-udas.custom.rules"
+    #define DEFAULT_UDEV_RULE "ACTION==\"add\", SUBSYSTEM==\"block\", "
     #define OPTION_DELIMITER "="
-    #define OPTION_ID_VENDOER "--idVendor="
-    #define OPTION_ID_PRODUCT "--idProduct="
-    #define OPTION_SERIAL "--serial="
-    #define OPION_MANUFACTURER "--manufacturer="
-    #define OPTION_PRODUCT "--product="
+    #define OPTION_ID_VENDOR "--idVendor"
+    #define OPTION_ID_PRODUCT "--idProduct"
+    #define OPTION_SERIAL "--serial"
+    #define OPTION_MANUFACTURER "--manufacturer"
+    #define OPTION_PRODUCT "--product"
+    #define OPTION_MOUTN_ENV "ENV{UDISKS_IGNORE}=\"0\"\n"
+    #define UNKNOWN "Unknown"
 
 #endif

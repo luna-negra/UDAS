@@ -81,7 +81,7 @@ int register_new_device(USB_INFO * usb_info)
     // create command to register new usb storage device to udev rule file
     if (snprintf(command, 
             sizeof(command), 
-            "./udas td add --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s", 
+            "./udas td register --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s", 
             usb_info->manufacture_id,
             usb_info->product_id,
             usb_info->serialnum,
@@ -100,6 +100,7 @@ int search_device(USB_INFO * usb_info)
 {
     int cmd_result = -1;
     char command[256];
+    char return_print[64];
 
     // create command to register new usb storage device to udev rule file
     if (snprintf(command, 
@@ -115,11 +116,26 @@ int search_device(USB_INFO * usb_info)
         return EXIT_FAILURE;
     }
 
-    cmd_result = system(command);
-    printf("%d\n", cmd_result);
-    
+    FILE * cmd = popen(command, "r");
+    while (fgets(return_print, sizeof(return_print), cmd) != NULL)
+    {
+        if (strcmp(return_print, "[INFO] registered device\n") == 0)
+        {
+            cmd_result = 0;
 
-    return EXIT_SUCCESS;
+            break;
+        }
+    }
+    pclose(cmd);
+
+    if (cmd_result != 0)
+    {
+        fprintf(stdout, "[INFO] Not a registered USB storage\n");
+        return EXIT_SUCCESS;
+    }
+    
+    fprintf(stdout, "[INFO] Already registered USB storage\n");
+    return EXIT_FAILURE;
 }
 
 void * work_thread(void * arg)
@@ -191,13 +207,27 @@ void * work_thread(void * arg)
             }
             else if (process_udas == 0)
             {
-
                 //cmd_result = register_new_device(&usb_info);
                 cmd_result = search_device(&usb_info);
+                sleep(1);
+
+                if (cmd_result == 0)
+                {
+                    fprintf(stdout, "[PYTHON] ENTER THE PASSWORD IN PYTHON\n");
+                    
+                    // Test
+                    char buffer[256];
+                    FILE * cmd = popen("", "r");
+                    while (fgets(buffer, sizeof(buffer), cmd) != NULL)
+                    {
+                        printf("%s\n", buffer);
+                    }
+                    pclose(cmd);
+
+                }
+                else {}
             }
-
-
-
+            // DO NOTHING IN MAIN PROCESS
 
         }
         else sleep(1);

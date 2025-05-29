@@ -49,7 +49,7 @@ USB_DEV get_dev_info(int argc, char * argv[])
 	return usb_dev;
 }
 
-void  create_udev_rule(int argc, char * argv [], char ** rule_str)
+void create_udev_rule(int argc, char * argv [], char ** rule_str)
 {
 	char rule_line[512] = DEFAULT_UDEV_RULE;
 	char tmpstr[128];
@@ -83,9 +83,9 @@ void  create_udev_rule(int argc, char * argv [], char ** rule_str)
 			snprintf(buffer, sizeof(buffer), "ATTRS{serial}==\"%s\", ", token);
 			strcat(rule_line, buffer);
 		}
-		else if (strcmp(token, OPTION_ID_PRODUCT) == 0)
+		else if (strcmp(token, OPTION_MANUFACTURER) == 0)
 		{
-			token = strtok(NULL, OPTION_MANUFACTURER);
+			token = strtok(NULL, OPTION_DELIMITER);
 			if (strncmp(token, "Unknown", sizeof("Unknown")) == 0)  continue;
 
 			snprintf(buffer, sizeof(buffer), "ATTRS{manufacturer}==\"%s\", ", token);
@@ -134,6 +134,7 @@ int remove_td(char ** rule_str)
 
 int search_td(char ** rule_str)
 {
+	int match_flag = -1;
 	char buffer[512];
 	FILE * rule_file = fopen(CUSTOM_DEFAULT_RULE, "r");
 	if (rule_file == NULL)
@@ -143,11 +144,15 @@ int search_td(char ** rule_str)
 	}
 
 	while (fgets(buffer, sizeof(buffer), rule_file) != NULL)
-	{
-		printf("%s\n", buffer);
-		// search code
+	{	
+		if (strcmp(*rule_str, buffer) == 0)
+		{
+			match_flag = 0;
+			break;
+		}
 	}
 
+	(match_flag == -1) ? fprintf(stdout, "[INFO] device not found\n") : fprintf(stdout, "[INFO] registered device\n");
 	return EXIT_SUCCESS;
 }
 

@@ -3,5 +3,4 @@
 !src/c/udas.*
 !src/c/udas_detector.*
 !src/python/
-!src/python/udas_alert.py
-!header/
+!src/python/*.py

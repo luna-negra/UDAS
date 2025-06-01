@@ -103,7 +103,6 @@ class PasswordInputDialog(QDialog):
         test_password = "Password"
 
         if test_password == self.input_password.text():
-            print("Execute UDAS Regiester")
             self.accept()
 
         else:
@@ -120,6 +119,7 @@ if __name__ == "__main__":
     if msg_box_result == QMessageBox.Yes:
         dialog = PasswordInputDialog(sys.argv)
         result = dialog.exec()
+
     else:
         sys.exit(-1)
 

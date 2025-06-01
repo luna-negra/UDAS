@@ -69,16 +69,19 @@ USB_INFO get_usb_dev(libusb_device * device, libusb_device_descriptor * desc)
 
     // close libusb.
     libusb_close(handler);
-    
     return usb_info;
 }
 
-int register_new_device(USB_INFO * usb_info)
+int call_gui_alert(USB_INFO * usb_info)
 {
     int cmd_result = -1;
     char command[256];
 
-    // create command to register new usb storage device to udev rule file
+    // requires to be checked duplication execution.
+
+
+
+    // create command to popup gui for checking new device.
     if (snprintf(command, 
             sizeof(command), 
             "/home/luna-negra/projects/UDAS/src/python/udas_alert --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s",
@@ -88,16 +91,45 @@ int register_new_device(USB_INFO * usb_info)
             usb_info->manufacture,
             usb_info->product) < 0)
     {
-        fprintf(stderr, "[ERROR] Fail to create UDAS command\n");
+        fprintf(stderr, "[ERROR] Fail to create alert command\n");
+        return EXIT_FAILURE;
+    }
+
+    // Abnormal: 65280
+    // Normal: 30720
+    FILE * cmd = popen(command, "r");
+    cmd_result = pclose(cmd);
+    printf("CALL_GUI: %d\n", cmd_result);
+    return (cmd_result != 65280) ? 0 : -1 ;
+}
+
+int register_device(USB_INFO * usb_info)
+{
+    int cmd_result = -1;
+    char command[256];
+    char buffer[64];
+
+    // create command to register new usb storage device to udev rule file
+    if (snprintf(command,
+            sizeof(command),
+            "./udas td register --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s",
+            usb_info->manufacture_id,
+            usb_info->product_id,
+            usb_info->serialnum,
+            usb_info->manufacture,
+            usb_info->product) < 0)
+    {
+        fprintf(stderr, "[ERROR] Fail to create register command\n");
         return EXIT_FAILURE;
     }
 
     FILE * cmd = popen(command, "r");
-    cmd_result = pclose(cmd);
-
-    // Abnormal: 65280
-    // Normal: 30720
-    return (cmd_result == 30720) ? 0 : -1 ;
+    while (fgets(buffer, sizeof(buffer), cmd) != NULL)
+    {
+        if (strcmp(buffer, "success\n") == 0) return EXIT_SUCCESS;
+    }
+    pclose(cmd);
+    return EXIT_FAILURE;
 }
 
 int search_device(USB_INFO * usb_info)
@@ -204,10 +236,7 @@ void * work_thread(void * arg)
             pid_t process_udas = fork();
             int cmd_result = -1;            
             
-            if (process_udas == -1)
-            {
-                fprintf(stderr, "[ERROR] Fail to create child process\n");
-            }
+            if (process_udas == -1) fprintf(stderr, "[ERROR] Fail to create child process\n");
             else if (process_udas == 0)
             {
                 cmd_result = search_device(&usb_info);
@@ -216,9 +245,18 @@ void * work_thread(void * arg)
                 if (cmd_result == 0)
                 {
                     // Register Check.
-                    if (register_new_device(&usb_info) == 0)
+                    if (call_gui_alert(&usb_info) == 0)
                     {
-                        printf("REGISTER USB DEVICE\n");
+                        if (register_device(&usb_info) == 0)
+                        {
+                            fprintf(stdout, "[INFO] New device is registered as a trusted device.\n") :
+                            // reload udev rule
+                            // udevadm trigger
+                        }
+                        else
+                        {
+                            fprintf(stderr, "[ERROR] Fail to register new device as a trusted device.\n") ;
+                        }
                     }
                 }
                 else {}

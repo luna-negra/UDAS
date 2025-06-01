@@ -81,7 +81,7 @@ int register_new_device(USB_INFO * usb_info)
     // create command to register new usb storage device to udev rule file
     if (snprintf(command, 
             sizeof(command), 
-            "./udas td register --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s", 
+            "/home/luna-negra/projects/UDAS/src/python/udas_alert --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s",
             usb_info->manufacture_id,
             usb_info->product_id,
             usb_info->serialnum,
@@ -92,8 +92,12 @@ int register_new_device(USB_INFO * usb_info)
         return EXIT_FAILURE;
     }
 
-    cmd_result = system(command);
-    return cmd_result;    
+    FILE * cmd = popen(command, "r");
+    cmd_result = pclose(cmd);
+
+    // Abnormal: 65280
+    // Normal: 30720
+    return (cmd_result == 30720) ? 0 : -1 ;
 }
 
 int search_device(USB_INFO * usb_info)
@@ -122,7 +126,6 @@ int search_device(USB_INFO * usb_info)
         if (strcmp(return_print, "[INFO] registered device\n") == 0)
         {
             cmd_result = 0;
-
             break;
         }
     }
@@ -207,23 +210,16 @@ void * work_thread(void * arg)
             }
             else if (process_udas == 0)
             {
-                //cmd_result = register_new_device(&usb_info);
                 cmd_result = search_device(&usb_info);
                 sleep(1);
 
                 if (cmd_result == 0)
                 {
-                    fprintf(stdout, "[PYTHON] ENTER THE PASSWORD IN PYTHON\n");
-                    
-                    // Test
-                    char buffer[256];
-                    FILE * cmd = popen("", "r");
-                    while (fgets(buffer, sizeof(buffer), cmd) != NULL)
+                    // Register Check.
+                    if (register_new_device(&usb_info) == 0)
                     {
-                        printf("%s\n", buffer);
+                        printf("REGISTER USB DEVICE\n");
                     }
-                    pclose(cmd);
-
                 }
                 else {}
             }

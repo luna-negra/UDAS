@@ -6,9 +6,11 @@ libusb_device * dequeue(USBDEV ** usb_dev)
     libusb_device * pop_data = (*usb_dev)->dev_list[(*usb_dev)->front];
     if (pop_data != NULL)
     {
+         // obtain lock and pop up new device from list.
         pthread_mutex_lock(&((*usb_dev)->lock));
         (*usb_dev)->dev_list[(*usb_dev)->front] = NULL;
         (*usb_dev)->front = ((*usb_dev)->front + 1) % Q_LEN;
+        // return lock.
         pthread_mutex_unlock(&((*usb_dev)->lock));
     }
     return pop_data ;
@@ -28,6 +30,7 @@ void enqueue(libusb_device ** device, libusb_context ** ctx, USBDEV ** usb_dev)
     pthread_mutex_lock(&((*usb_dev)->lock));
     (*usb_dev)->dev_list[(*usb_dev)->rear] = *device;
     (*usb_dev)->rear = (((*usb_dev)->rear) + 1) % Q_LEN;
+    // return lock.
     pthread_mutex_unlock(&((*usb_dev)->lock));
     return;
 }
@@ -38,7 +41,7 @@ USB_INFO get_usb_dev(libusb_device * device, libusb_device_descriptor * desc)
     USB_INFO usb_info ;
     usb_info.result = 0;
 
-    // open libusb for newly connected USB storage.
+    // open libusb for checking newly connected USB storage.
     int r = libusb_open(device, &handler);
     
     // check libusb status.
@@ -63,8 +66,8 @@ USB_INFO get_usb_dev(libusb_device * device, libusb_device_descriptor * desc)
     
     fprintf(
         stdout, 
-        "[INFO] New USB Storage is connected - Vendor: %s (%04x), Product: %s (%04x), SerialNum: %s\n", 
-        usb_info.manufacture, usb_info.manufacture_id, usb_info.product, usb_info.product_id, usb_info.serialnum
+        "[INFO] New USB Storage (%04x: %04x) is connected: Vendor - %s, Product: %s Serial: %s\n", 
+        usb_info.manufacture_id, usb_info.product_id, usb_info.manufacture, usb_info.product, usb_info.serialnum
     );
 
     // close libusb.
@@ -92,11 +95,13 @@ int register_device(USB_INFO * usb_info)
         return EXIT_FAILURE;
     }
 
+    // open pipe and file pointre for command execution.
     FILE * cmd = popen(command, "r");
     while (fgets(buffer, sizeof(buffer), cmd) != NULL)
     {
-        if (strcmp(buffer, "success\n") == 0) return EXIT_SUCCESS;
+        if (strcmp(buffer, "success to regiser new trusted USB storage.\n") == 0) return EXIT_SUCCESS;
     }
+    // close pipe and remove file pointre.
     pclose(cmd);
     return EXIT_FAILURE;
 }
@@ -121,6 +126,7 @@ int search_device(USB_INFO * usb_info)
         return EXIT_FAILURE;
     }
 
+    // open pipe and file pointre for command execution.
     FILE * cmd = popen(command, "r");
     while (fgets(return_print, sizeof(return_print), cmd) != NULL)
     {
@@ -130,6 +136,8 @@ int search_device(USB_INFO * usb_info)
             break;
         }
     }
+
+    // close pipe and remove file pointre.
     pclose(cmd);
 
     if (cmd_result != 0)
@@ -144,30 +152,38 @@ int search_device(USB_INFO * usb_info)
 
 void * call_gui_alert_thread(USB_INFO * usb_info)
 {
-    pid_t child_proc = fork();
+    // search_device: if there is no search data, return NULL.
+    if (search_device(usb_info) == EXIT_FAILURE) return NULL;
 
+    fprintf(stdout, "[INFO] Start calling subprocess for udas_alert.\n");
+
+    // create child process for udas_alert
+    pid_t child_proc = fork();
     if (child_proc == -1)
     {
         fprintf(stderr, "[ERROR] Fail to create subprocess\n");
         return NULL;
     }
-    else if (child_proc == 0)
-    {
-        char idVendor[64];
-        char idProduct[64];
-        char serial[64];
-        char manufacturer[64];
-        char product[64];
 
+    if (child_proc == 0)
+    {
+        // child process for udas_alert
+        char idVendor[64], idProduct[64], serial[64], manufacturer[64], product[64];        
+
+        fprintf(stdout, "[INFO] (udas_alert) Asking about new USB storage...\n");
         snprintf(idVendor, sizeof(idVendor), "--idVendor=%04x", usb_info->manufacture_id);
         snprintf(idProduct, sizeof(idProduct), "--idProduct=%04x", usb_info->product_id);
         snprintf(serial, sizeof(serial), "--serial=%s", usb_info->serialnum);
         snprintf(manufacturer, sizeof(manufacturer), "--manufacturer=%s", usb_info->manufacture);
         snprintf(product, sizeof(product), "--product=%s", usb_info->product);
-        execlp("udas_alert", "udas_alert", idVendor, idProduct, serial, manufacturer, product, NULL);
+        execl(UDAS_ALERT_PATH, UDAS_ALERT_PATH, idVendor, idProduct, serial, manufacturer, product, NULL);
+        
+        // exit child process with error code.
+        exit(-2);
     }
     else
     {
+        // parent process
         int status, exit_code;
         waitpid(child_proc, &status, 0);
 
@@ -182,6 +198,7 @@ void * call_gui_alert_thread(USB_INFO * usb_info)
                 fprintf(stdout, "[INFO] Success to register new USB storage as a trusted device.\n"):
                 fprintf(stderr, "[ERROR] Fail to register new USB storage as a trusted device.\n");
             }
+            else if (exit_code == 254) fprintf(stderr, "[ERROR] Can not find the udas_alert.\n");
             else fprintf(stderr, "[INFO] New USB storage is not registered as a trusted device.\n") ;
         }
         else if (WIFSIGNALED(status)) fprintf(stderr, "[ERROR] udas_alert is terminated by signal.\n");
@@ -260,6 +277,7 @@ void * work_thread(void * arg)
     exit(-1);
 }
 
+// executed by libusb_hotplug_register_callback and libusb_handle_events_completed
 int hotplug_fn(libusb_context *ctx, libusb_device *device, libusb_hotplug_event event, void *user_data)
 {
     USBDEV * usb_dev = (USBDEV *)user_data;

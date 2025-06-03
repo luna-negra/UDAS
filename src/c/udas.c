@@ -3,8 +3,7 @@
 
 void manual()
 {
-	printf("[ udas ]\n");
-	printf("\n** This is a Manual **\n");
+	printf("\033[0;31m[WARNING] This command can not be run by user command.\033[0;0m\n");
 	return;
 }
 
@@ -46,67 +45,58 @@ USB_DEV get_dev_info(int argc, char * argv[])
 		}
 	}
 
+	fprintf(stdout, "[INFO] Successfully parsing newly connected USB storage information.\n");
 	return usb_dev;
 }
 
-void create_udev_rule(int argc, char * argv [], char ** rule_str)
+void create_udev_rule(USB_DEV * usb_dev, char ** rule_str)
 {
 	char rule_line[512] = DEFAULT_UDEV_RULE;
-	char tmpstr[128];
-
-	for (int i = 3; i < argc ; i++)
+	char idVendor[64], idProduct[64], serial[64], manufacturer[64], product[64];
+	
+	if (strcmp(usb_dev->idVendor, "") != 0) 
 	{
-		char * token = strtok(argv[i], OPTION_DELIMITER);
-		char buffer[64];
-
-		if (strcmp(token, OPTION_ID_VENDOR) == 0) 
-		{
-			token = strtok(NULL, OPTION_DELIMITER);
-			if (strncmp(token, "Unknown", sizeof("Unknown")) == 0)  continue;
-
-			snprintf(buffer, sizeof(buffer), "ATTRS{idVendor}==\"%s\", ", token);
-			strcat(rule_line, buffer);
-		}
-		else if (strcmp(token, OPTION_ID_PRODUCT) == 0)
-		{
-			token = strtok(NULL, OPTION_DELIMITER);
-			if (strncmp(token, "Unknown", sizeof("Unknown")) == 0) continue;
-			
-			snprintf(buffer, sizeof(buffer), "ATTRS{idProduct}==\"%s\", ", token);
-			strcat(rule_line, buffer);
-		}
-		else if (strcmp(token, OPTION_SERIAL) == 0)
-		{
-			token = strtok(NULL, OPTION_DELIMITER);
-			if (strncmp(token, "Unknown", sizeof("Unknown")) == 0) continue;
-			
-			snprintf(buffer, sizeof(buffer), "ATTRS{serial}==\"%s\", ", token);
-			strcat(rule_line, buffer);
-		}
-		else if (strcmp(token, OPTION_MANUFACTURER) == 0)
-		{
-			token = strtok(NULL, OPTION_DELIMITER);
-			if (strncmp(token, "Unknown", sizeof("Unknown")) == 0)  continue;
-
-			snprintf(buffer, sizeof(buffer), "ATTRS{manufacturer}==\"%s\", ", token);
-			strcat(rule_line, buffer);
-		}
-		else if (strcmp(token, OPTION_PRODUCT) == 0)
-		{
-			token = strtok(NULL, OPTION_DELIMITER);
-			if (strncmp(token, "Unknown", sizeof("Unknown")) == 0) continue;
-
-			snprintf(buffer, sizeof(buffer), "ATTRS{product}==\"%s\", ", token);
-			strcat(rule_line, buffer);
-		}
+		snprintf(idVendor, sizeof(idVendor), "ATTRS{idVendor}==\"%s\", ", usb_dev->idVendor);
+		strcat(rule_line, idVendor);
+	}
+	if (strcmp(usb_dev->idProduct, "") != 0) 
+	{
+		snprintf(idProduct, sizeof(idProduct), "ATTRS{idProduct}==\"%s\", ", usb_dev->idProduct);
+		strcat(rule_line, idProduct);
+	}
+	if (strcmp(usb_dev->serial, "") != 0) 
+	{
+		snprintf(serial, sizeof(serial), "ATTRS{serial}==\"%s\", ", usb_dev->serial);
+		strcat(rule_line, serial);
+	}
+	if (strcmp(usb_dev->manufacturer, "") != 0) 
+	{
+		snprintf(manufacturer, sizeof(manufacturer), "ATTRS{manufacturer}==\"%s\", ", usb_dev->manufacturer);
+		strcat(rule_line, manufacturer);
+	}
+	if (strcmp(usb_dev->product, "") != 0) 
+	{
+		snprintf(product, sizeof(product), "ATTRS{product}==\"%s\", ", usb_dev->product);
+		strcat(rule_line, product);
 	}
 
-	strncat(rule_line, OPTION_MOUTN_ENV, sizeof(OPTION_MOUTN_ENV));
-	strncpy(*rule_str, rule_line, sizeof(rule_line));	
+	strcat(rule_line, "ENV{UDISKS_IGNORE}=\"0\"\n");
+	strcpy(*rule_str, rule_line);
+	fprintf(stdout, "[INFO] Successfully create rule string for newly connected USB storage.\n");
 }
 
-int register_td(char ** rule_str)
+int register_td(char ** rule_str, USB_DEV * usb_dev)
 {
+	fprintf(
+		stdout,
+		"[INFO] Start registering trusted USB Storage (%s:%s): vendor - %s, produdct - %s, serial - %s\n",
+		usb_dev->idVendor,
+		usb_dev->idProduct,
+		usb_dev->manufacturer,
+		usb_dev->product,
+		(strlen(usb_dev->serial) == 0) ? "Unknown": usb_dev->serial
+	);
+	
 	FILE * rule_file = fopen(CUSTOM_DEFAULT_RULE, "a");
 	if (rule_file == NULL)
 	{
@@ -121,22 +111,68 @@ int register_td(char ** rule_str)
 		return EXIT_FAILURE;
 	}
 
-	fprintf(stdout, "success\n");
-	fclose(rule_file);	
+	fprintf(stdout, "success to regiser new trusted USB storage.\n");
+	fclose(rule_file);
 	return EXIT_SUCCESS;
 }
 
-int remove_td(char ** rule_str)
+int remove_td(char ** rule_str, USB_DEV * usb_dev)
 {
+	fprintf(
+		stdout,
+		"[INFO] Start removing trusted USB Storage (%s:%s): vendor - %s, produdct - %s, serial - %s\n",
+		usb_dev->idVendor,
+		usb_dev->idProduct,
+		usb_dev->manufacturer,
+		usb_dev->product,
+		(strlen(usb_dev->serial) == 0) ? "Unknown": usb_dev->serial
+	);
 
+	char buffer[512];
+	FILE * rule_file = fopen(CUSTOM_DEFAULT_RULE, "r");
+	
+	if (rule_file == NULL)
+	{
+		fprintf(stderr, "[ERROR] Can not read custom rule file.\n");
+		return EXIT_FAILURE;
+	}
+
+	FILE * tmp_file = fopen(CUSTOM_DEFAULT_RULE_TMP, "w");
+	if (rule_file == NULL)
+	{
+		fprintf(stderr, "[ERROR] Can not open tmp rule file.\n");
+		return EXIT_FAILURE;
+	}
+
+	while (fgets(buffer, sizeof(buffer), rule_file) != NULL)
+	{
+		if (strcmp(buffer, *rule_str) != 0)	fputs(buffer, tmp_file);
+	}
+
+	remove(CUSTOM_DEFAULT_RULE);
+	rename(CUSTOM_DEFAULT_RULE_TMP, CUSTOM_DEFAULT_RULE);
+
+	fclose(rule_file);
+	fclose(tmp_file);
 	return EXIT_SUCCESS;
 }
 
-int search_td(char ** rule_str)
+int search_td(char ** rule_str, USB_DEV * usb_dev)
 {
+	fprintf(
+		stdout,
+		"[INFO] Start searching trusted USB Storage (%s:%s): vendor - %s, produdct - %s, serial - %s\n",
+		usb_dev->idVendor,
+		usb_dev->idProduct,
+		usb_dev->manufacturer,
+		usb_dev->product,
+		(strlen(usb_dev->serial) == 0) ? "Unknown": usb_dev->serial
+	);
+
 	int match_flag = -1;
 	char buffer[512];
 	FILE * rule_file = fopen(CUSTOM_DEFAULT_RULE, "r");
+
 	if (rule_file == NULL)
 	{
 		fprintf(stderr, "[ERROR] Fail to open UDAS rule file.\n");
@@ -160,30 +196,31 @@ int main (int argc, char * argv[])
 {
 	int not_filtered = -1;
 
-	if (argc < 3)
+	if (argc != 8)
 	{
 		manual();
 		return EXIT_FAILURE;
 	}
-	
+
 	if (strcmp(argv[1], "td") == 0)
 	{
-		char * rule_str = malloc(sizeof(char) * 512); 			// 2025.05.29 : change logic
-		create_udev_rule(argc, argv, &rule_str);    			// 2025.05.29 : change logic
+		USB_DEV usb_dev = get_dev_info(argc, argv);
+		char * rule_str = malloc(sizeof(char) * 512); 
+		create_udev_rule(&usb_dev, &rule_str);
 		
 		if (strcmp(rule_str, DEFAULT_UDEV_RULE) != 0)
 		{
 			if ((strcmp(argv[2], "register")) == 0)
 			{
-				if (register_td(&rule_str) == EXIT_SUCCESS)	not_filtered = 0;
+				if (register_td(&rule_str, &usb_dev) == EXIT_SUCCESS)	not_filtered = 0;
 			}
 			else if (!(strcmp(argv[2], "search")))
 			{
-				if (search_td(&rule_str) == EXIT_SUCCESS) not_filtered = 0;
+				if (search_td(&rule_str, &usb_dev) == EXIT_SUCCESS) not_filtered = 0;
 			}
 			else if (!(strcmp(argv[2], "remove")))
 			{
-				if (remove_td(&rule_str) == EXIT_SUCCESS) not_filtered =0;
+				if (remove_td(&rule_str, &usb_dev) == EXIT_SUCCESS) not_filtered =0;
 			}
 		}
 

@@ -18,7 +18,10 @@ EXIT_FAILURE: 1
     #include <sys/wait.h>
 
     #define Q_LEN 16
-    
+
+    // need to edit after testing: 2025.06.03
+    #define UDAS_ALERT_PATH "/home/luna-negra/projects/UDAS/src/python/udas_alert"
+
     typedef struct libusb_device_descriptor libusb_device_descriptor;
     typedef struct {
         short result;

@@ -1,0 +1,6 @@
+*
+!.gitignore
+!src/c/udas.*
+!src/c/udas_detector.*
+!src/python/
+!src/python/*.py

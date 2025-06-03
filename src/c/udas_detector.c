@@ -72,37 +72,6 @@ USB_INFO get_usb_dev(libusb_device * device, libusb_device_descriptor * desc)
     return usb_info;
 }
 
-int bak_call_gui_alert(USB_INFO * usb_info)
-{
-    int cmd_result = -1;
-    char command[256];
-
-    // requires to be checked duplication execution.
-
-
-    // create command to popup gui for checking new device.
-    /*
-    if (snprintf(command, 
-            sizeof(command), 
-            "udas_alert --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s",
-            usb_info->manufacture_id,
-            usb_info->product_id,
-            usb_info->serialnum,
-            usb_info->manufacture,
-            usb_info->product) < 0)
-    {
-        fprintf(stderr, "[ERROR] Fail to create alert command\n");
-        return EXIT_FAILURE;
-    }
-
-    // Abnormal: 65280
-    // Normal: 30720
-    FILE * cmd = popen(command, "r");
-    cmd_result = pclose(cmd);
-    return (cmd_result != 65280) ? 0 : -1 ;
-    */
-}
-
 int register_device(USB_INFO * usb_info)
 {
     int cmd_result = -1;

@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (QApplication,
 from PySide6.QtGui import QScreen
 
 
-def get_usb_info(options: list) -> dict:
+def get_usb_info(options: tuple) -> dict:
     tmp: dict = {}
     for option in options[1:]:
         option_tmp: list = option.split("=")
@@ -26,7 +26,7 @@ Do you want to register it as a trusted device?
 
 
 class AlertNewUSB(QMessageBox):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, args):
         super().__init__()
         self.setWindowTitle("UDAS Alert")
         self.centralise(400, 200)
@@ -40,19 +40,25 @@ class AlertNewUSB(QMessageBox):
         screen = QScreen.availableGeometry(QApplication.primaryScreen())
         window_x = int((screen.width() - window_width) / 2)
         window_y = int((screen.height() - window_height) / 2)
-        self.setGeometry(window_x, window_y, window_width, window_height)
+        self.move(window_x, window_y)
+        self.setFixedSize(window_width, window_height)
 
     def init_ui(self, options: tuple):
-        # get information from cmd options
-        usb_info: dict = get_usb_info(options[0])
+        if len(options) == 1:
+            self.setText("[WARNING] Invalid Execute Command.\n")
+            self.setIcon(QMessageBox.Warning)
 
-        # set question MessageBox
-        self.setText(usb_info.get("info_label"))
-        self.setIcon(QMessageBox.Question)
+        else:
+            # get information from cmd options
+            usb_info: dict = get_usb_info(options)
 
-        # button setting
-        self.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-        self.setDefaultButton(QMessageBox.No)
+            # set question MessageBox
+            self.setText(usb_info.get("info_label"))
+            self.setIcon(QMessageBox.Question)
+
+            # button setting
+            self.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            self.setDefaultButton(QMessageBox.No)
 
 
 class PasswordInputDialog(QDialog):

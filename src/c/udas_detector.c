@@ -72,7 +72,7 @@ USB_INFO get_usb_dev(libusb_device * device, libusb_device_descriptor * desc)
     return usb_info;
 }
 
-int call_gui_alert(USB_INFO * usb_info)
+int bak_call_gui_alert(USB_INFO * usb_info)
 {
     int cmd_result = -1;
     char command[256];
@@ -80,11 +80,11 @@ int call_gui_alert(USB_INFO * usb_info)
     // requires to be checked duplication execution.
 
 
-
     // create command to popup gui for checking new device.
+    /*
     if (snprintf(command, 
             sizeof(command), 
-            "/home/luna-negra/projects/UDAS/src/python/udas_alert --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s",
+            "udas_alert --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s",
             usb_info->manufacture_id,
             usb_info->product_id,
             usb_info->serialnum,
@@ -99,8 +99,8 @@ int call_gui_alert(USB_INFO * usb_info)
     // Normal: 30720
     FILE * cmd = popen(command, "r");
     cmd_result = pclose(cmd);
-    printf("CALL_GUI: %d\n", cmd_result);
     return (cmd_result != 65280) ? 0 : -1 ;
+    */
 }
 
 int register_device(USB_INFO * usb_info)
@@ -173,6 +173,54 @@ int search_device(USB_INFO * usb_info)
     return EXIT_FAILURE;
 }
 
+// test: 2025.06.03
+void * call_gui_alert_thread(USB_INFO * usb_info)
+{
+    pid_t child_proc = fork();
+
+    if (child_proc == -1)
+    {
+        fprintf(stderr, "[ERROR] Fail to create subprocess\n");
+        return NULL;
+    }
+    else if (child_proc == 0)
+    {
+        char idVendor[64];
+        char idProduct[64];
+        char serial[64];
+        char manufacturer[64];
+        char product[64];
+
+        snprintf(idVendor, sizeof(idVendor), "--idVendor=%04x", usb_info->manufacture_id);
+        snprintf(idProduct, sizeof(idProduct), "--idProduct=%04x", usb_info->product_id);
+        snprintf(serial, sizeof(serial), "--serial=%s", usb_info->serialnum);
+        snprintf(manufacturer, sizeof(manufacturer), "--manufacturer=%s", usb_info->manufacture);
+        snprintf(product, sizeof(product), "--product=%s", usb_info->product);
+        execlp("udas_alert", "udas_alert", idVendor, idProduct, serial, manufacturer, product, NULL);
+    }
+    else
+    {
+        int status, exit_code;
+        waitpid(child_proc, &status, 0);
+
+        if (WIFEXITED(status))
+        {
+            exit_code = WEXITSTATUS(status);
+
+            // 0: Success, 255: Cancel
+            if (exit_code == 0)
+            {
+                (register_device(usb_info) == EXIT_SUCCESS) ?
+                fprintf(stdout, "[INFO] Success to register new USB storage as a trusted device.\n"):
+                fprintf(stderr, "[ERROR] Fail to register new USB storage as a trusted device.\n");
+            }
+            else fprintf(stderr, "[INFO] New USB storage is not registered as a trusted device.\n") ;
+        }
+        else if (WIFSIGNALED(status)) fprintf(stderr, "[ERROR] udas_alert is terminated by signal.\n");
+    }
+    return NULL;
+}
+
 void * work_thread(void * arg)
 {
     USBDEV ** usb_dev = (USBDEV**)&(arg);
@@ -231,6 +279,15 @@ void * work_thread(void * arg)
             usb_info = get_usb_dev(device, &desc);
             usb_info.device_class = infc->altsetting->bInterfaceClass;
 
+            // convert to thread: 2025.06.03
+            pthread_t grand_thread;
+
+            // create grand_thread
+            pthread_create(&grand_thread, NULL, (void *)call_gui_alert_thread, &usb_info);
+
+
+
+            /*
             // read udev rules and find
             // create udas process to search newly connected USB device in udev rule file.
             pid_t process_udas = fork();
@@ -249,7 +306,7 @@ void * work_thread(void * arg)
                     {
                         if (register_device(&usb_info) == 0)
                         {
-                            fprintf(stdout, "[INFO] New device is registered as a trusted device.\n") :
+                            fprintf(stdout, "[INFO] New device is registered as a trusted device.\n");
                             // reload udev rule
                             // udevadm trigger
                         }
@@ -262,7 +319,7 @@ void * work_thread(void * arg)
                 else {}
             }
             // DO NOTHING IN MAIN PROCESS
-
+            */
         }
         else sleep(1);
     }

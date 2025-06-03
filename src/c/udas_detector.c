@@ -173,7 +173,6 @@ int search_device(USB_INFO * usb_info)
     return EXIT_FAILURE;
 }
 
-// test: 2025.06.03
 void * call_gui_alert_thread(USB_INFO * usb_info)
 {
     pid_t child_proc = fork();
@@ -284,42 +283,6 @@ void * work_thread(void * arg)
 
             // create grand_thread
             pthread_create(&grand_thread, NULL, (void *)call_gui_alert_thread, &usb_info);
-
-
-
-            /*
-            // read udev rules and find
-            // create udas process to search newly connected USB device in udev rule file.
-            pid_t process_udas = fork();
-            int cmd_result = -1;            
-            
-            if (process_udas == -1) fprintf(stderr, "[ERROR] Fail to create child process\n");
-            else if (process_udas == 0)
-            {
-                cmd_result = search_device(&usb_info);
-                sleep(1);
-
-                if (cmd_result == 0)
-                {
-                    // Register Check.
-                    if (call_gui_alert(&usb_info) == 0)
-                    {
-                        if (register_device(&usb_info) == 0)
-                        {
-                            fprintf(stdout, "[INFO] New device is registered as a trusted device.\n");
-                            // reload udev rule
-                            // udevadm trigger
-                        }
-                        else
-                        {
-                            fprintf(stderr, "[ERROR] Fail to register new device as a trusted device.\n") ;
-                        }
-                    }
-                }
-                else {}
-            }
-            // DO NOTHING IN MAIN PROCESS
-            */
         }
         else sleep(1);
     }

@@ -150,10 +150,45 @@ int search_device(USB_INFO * usb_info)
     return EXIT_FAILURE;
 }
 
+int is_udas_alert_run(USB_INFO * usb_info)
+{
+    int line = 0;
+    char command[256] = "ps -aux | grep udas_alert ";
+    char option_idVendor[64], option_idproduct[64], option_serial[64], buffer[512];
+
+    snprintf(option_idVendor, sizeof(option_idVendor), "| grep %04x ", usb_info->manufacture_id);
+    snprintf(option_idproduct, sizeof(option_idproduct), "| grep %04x ", usb_info->product_id);
+    snprintf(option_serial, sizeof(option_serial), "| grep %s ", usb_info->serialnum);
+
+    strcat(command, option_idVendor);
+    strcat(command, option_idproduct);
+    strcat(command, option_serial);
+    
+    FILE * cmd = popen(command, "r");
+
+    if (cmd != NULL)
+    {   
+        while (fgets(buffer, sizeof(buffer), cmd) != NULL)
+        {
+            if (strlen(buffer) != 0) line += 1;        
+        }
+        pclose(cmd);
+    }
+
+    return (line <= 1) ? EXIT_SUCCESS : EXIT_FAILURE ;
+}
+
 void * call_gui_alert_thread(USB_INFO * usb_info)
 {
-    // search_device: if there is no search data, return NULL.
+        // search_device: if there is no search data, return NULL.
     if (search_device(usb_info) == EXIT_FAILURE) return NULL;
+
+    // check duplicate execution for udas_alert
+    if (is_udas_alert_run(usb_info) != EXIT_SUCCESS)
+    {
+        printf("[WARNING] Process for the same USB storage is already Running.\n");
+        return NULL;
+    }
 
     fprintf(stdout, "[INFO] Start calling subprocess for udas_alert.\n");
 
@@ -168,8 +203,7 @@ void * call_gui_alert_thread(USB_INFO * usb_info)
     if (child_proc == 0)
     {
         // child process for udas_alert
-        char idVendor[64], idProduct[64], serial[64], manufacturer[64], product[64];        
-
+        char idVendor[64], idProduct[64], serial[64], manufacturer[64], product[64];
         fprintf(stdout, "[INFO] (udas_alert) Asking about new USB storage...\n");
         snprintf(idVendor, sizeof(idVendor), "--idVendor=%04x", usb_info->manufacture_id);
         snprintf(idProduct, sizeof(idProduct), "--idProduct=%04x", usb_info->product_id);

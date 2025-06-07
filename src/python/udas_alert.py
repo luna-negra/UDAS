@@ -1,4 +1,9 @@
-from udas_pytool import *
+from udas_pytool import (sys,
+                         QScreen,
+                         QApplication,
+                         QMessageBox,
+                         centralise,
+                         PasswordInputDialog)
 
 
 def get_usb_info(options: tuple) -> dict:
@@ -20,19 +25,8 @@ class AlertNewUSB(QMessageBox):
     def __init__(self, args):
         super().__init__()
         self.setWindowTitle("UDAS Alert")
-        self.centralise(400, 200)
+        centralise(self, 400, 200)
         self.init_ui(args)
-
-    def centralise(self, window_width: int, window_height: int):
-        # get a primary screen from QApplication
-        # apply it as an argument QScreen.availableGeometry
-        # center the widget with center()
-        # cnn not apply on Ubuntu Wayland.
-        screen = QScreen.availableGeometry(QApplication.primaryScreen())
-        window_x = int((screen.width() - window_width) / 2)
-        window_y = int((screen.height() - window_height) / 2)
-        self.move(window_x, window_y)
-        self.setFixedSize(window_width, window_height)
 
     def init_ui(self, options: tuple):
         if len(options) == 1:
@@ -56,11 +50,9 @@ if __name__ == "__main__":
     app = QApplication()
     msg_box = AlertNewUSB(sys.argv)
     msg_box_result = msg_box.exec()
-    if msg_box_result == QMessageBox.Yes:
-        dialog = PasswordInputDialog(sys.argv)
-        result = dialog.exec()
-
-    else:
+    if msg_box_result != QMessageBox.Yes:
         sys.exit(-1)
 
+    dialog = PasswordInputDialog(sys.argv)
+    result = dialog.exec()
     sys.exit(app.quit())

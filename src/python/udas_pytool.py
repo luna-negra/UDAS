@@ -1,21 +1,33 @@
 import sys
 import configparser
-from PySide6.QtGui import QScreen
+from PySide6.QtGui import (QScreen,
+                           QAction,
+                           QIcon,
+                           QKeySequence,)
 from PySide6.QtWidgets import (QApplication,
                                QMainWindow,
                                QWidget,
                                QDialog,
                                QMessageBox,
+                               QMenu,
                                QVBoxLayout,
                                QHBoxLayout,
                                QListWidget,
                                QTableWidget,
                                QLineEdit,
                                QPushButton,
-                               QLabel)
+                               QLabel,)
 
 
 CONFIG_PATH: str = "../../config/config.ini"
+
+
+def centralise(obj, window_width: int, window_height: int):
+    screen = QScreen.availableGeometry(QApplication.primaryScreen())
+    window_x = int((screen.width() - window_width) / 2)
+    window_y = int((screen.height() - window_height) / 2)
+    obj.move(window_x, window_y)
+    obj.setFixedSize(window_width, window_height)
 
 
 class ConfigIni:
@@ -75,15 +87,8 @@ class PasswordInputDialog(QDialog):
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.setWindowTitle("Register Trusted USB")
-        self.centralise(440, 150)
+        centralise(self, 440, 150)
         self.init_ui(args)
-
-    def centralise(self, window_width: int, window_height: int):
-        screen = QScreen.availableGeometry(QApplication.primaryScreen())
-        window_x = int((screen.width() - window_width) / 2)
-        window_y = int((screen.height() - window_height) / 2)
-        self.move(window_x, window_y)
-        self.setFixedSize(window_width, window_height)
 
     def init_ui(self, options: tuple):
         # create layout
@@ -116,6 +121,7 @@ class PasswordInputDialog(QDialog):
         self.setLayout(main_layout)
 
     def on_click_register_btn(self):
+        # 2025.06.07: require encryption.
         test_password = ConfigIni().get_auth_str()
 
         if test_password == self.input_password.text():

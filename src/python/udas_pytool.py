@@ -1,5 +1,6 @@
 import sys
 import configparser
+from PySide6.QtCore import Qt
 from PySide6.QtGui import (QScreen,
                            QAction,
                            QIcon,
@@ -10,13 +11,15 @@ from PySide6.QtWidgets import (QApplication,
                                QDialog,
                                QMessageBox,
                                QMenu,
+                               QSplitter,
                                QVBoxLayout,
                                QHBoxLayout,
                                QListWidget,
                                QTableWidget,
                                QLineEdit,
                                QPushButton,
-                               QLabel,)
+                               QLabel,
+                               QFrame,)
 
 
 CONFIG_PATH: str = "../../config/config.ini"
@@ -28,6 +31,14 @@ def centralise(obj, window_width: int, window_height: int):
     window_y = int((screen.height() - window_height) / 2)
     obj.move(window_x, window_y)
     obj.setFixedSize(window_width, window_height)
+
+def get_separate_line(color:str="#fff", thickness:int=1, line_type=QFrame.HLine, shadow=QFrame.Sunken):
+    separate_line = QFrame()
+    separate_line.setFrameShape(line_type)
+    separate_line.setStyleSheet(f"background-color: {color};")
+    separate_line.setFrameShadow(shadow)  # Sunken | Raised | Plain
+    separate_line.setFixedHeight(thickness)
+    return separate_line
 
 
 class ConfigIni:

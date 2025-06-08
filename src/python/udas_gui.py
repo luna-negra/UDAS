@@ -14,8 +14,10 @@ from udas_pytool import (sys,
                          QTableWidget,
                          QPushButton,
                          QLabel,
+                         BUTTON_STYLE,
                          ConfigIni,
                          centralise,
+                         clear_layout,
                          PasswordInputDialog,
                          get_separate_line,)
 
@@ -23,10 +25,9 @@ from udas_pytool import (sys,
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        config = ConfigIni()
 
         # set title of main window
-        self.setWindowTitle(f"UDAS - {config.get_version()}")
+        self.setWindowTitle("UDAS")
 
         # centralize
         centralise(self, 600, 400)
@@ -147,6 +148,11 @@ class MainWindow(QMainWindow):
         btn_settings.setFixedSize(150, 50)
         btn_log.setFixedSize(150, 50)
 
+        btn_main.setStyleSheet(BUTTON_STYLE)
+        btn_mgmt.setStyleSheet(BUTTON_STYLE)
+        btn_settings.setStyleSheet(BUTTON_STYLE)
+        btn_log.setStyleSheet(BUTTON_STYLE)
+
         # btn set status bar
         btn_main.setStatusTip("Main")
         btn_mgmt.setStatusTip("USB Management")
@@ -177,9 +183,12 @@ class MainWindow(QMainWindow):
 
 
 class MainContent:
+    _CONFIG = ConfigIni()
 
     @staticmethod
     def main(content_widget):
+        clear_layout(content_widget)
+
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 10, 20, 10)
 
@@ -253,7 +262,68 @@ class MainContent:
 
     @staticmethod
     def settings(content_widget):
-        print("Settings")
+        clear_layout(content_widget)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(20, 10, 20, 10)
+
+        # widget for version information
+        widget_version = QWidget()
+        widget_version.setFixedSize(360, 90)
+
+        layout_version = QVBoxLayout()
+        layout_version_info = QHBoxLayout()
+        layout_version_info.setContentsMargins(0, 10, 0, 0)
+
+        label_version = QLabel("<b>Version Information</b>")
+        label_version_info = QLabel(f" * UDAS VERSION {MainContent._CONFIG.get_version()} BETA")
+        label_version.setFixedSize(360, 25)
+        label_version_info.setFixedSize(360, 25)
+
+        layout_version_info.addWidget(label_version_info)
+        layout_version.addWidget(label_version)
+        layout_version.addLayout(layout_version_info)
+        layout_version.addStretch()
+        widget_version.setLayout(layout_version)
+
+        # widget for
+        widget_service = QWidget()
+        widget_service.setFixedSize(360, 90)
+
+        layout_service = QVBoxLayout()
+        layout_service_ctrl = QHBoxLayout()
+
+        label_service = QLabel("<b>UDAS Service</b>")
+        label_service_info = QLabel(" Service Control")
+        btn_service_sw = QPushButton()
+        btn_service_sw.setFlat(False)
+        btn_service_sw.setFixedSize(100, 25)
+        btn_service_sw.setStyleSheet(BUTTON_STYLE)
+
+        text = "On" if True else "Off"
+        btn_service_sw.setText(text)
+
+        label_service.setFixedSize(360, 25)
+        label_service_info.setFixedSize(240, 25)
+
+        layout_service_ctrl.addWidget(label_service_info)
+        layout_service_ctrl.addWidget(btn_service_sw)
+        layout_service_ctrl.addStretch()
+
+        layout_service.addWidget(label_service)
+        layout_service.addLayout(layout_service_ctrl)
+        layout_service.addStretch()
+        widget_service.setLayout(layout_service)
+
+
+
+
+        layout.addWidget(widget_version)
+        layout.addWidget(get_separate_line(color="#555"))
+        layout.addWidget(widget_service)
+        layout.addStretch()
+        content_widget.setLayout(layout)
+        return
 
     @staticmethod
     def log(content_widget):

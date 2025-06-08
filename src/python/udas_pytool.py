@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (QApplication,
                                QHBoxLayout,
                                QListWidget,
                                QTableWidget,
+                               QCheckBox,
                                QLineEdit,
                                QPushButton,
                                QLabel,
@@ -23,6 +24,16 @@ from PySide6.QtWidgets import (QApplication,
 
 
 CONFIG_PATH: str = "../../config/config.ini"
+BUTTON_STYLE: str = """
+            QPushButton {
+                border: 1px solid #555;
+                border-radius: 4px;
+                padding: 4px 8px;
+            }
+            QPushButton:hover {
+                background-color: #fff;
+                color: #000;
+            }"""
 
 
 def centralise(obj, window_width: int, window_height: int):
@@ -31,6 +42,14 @@ def centralise(obj, window_width: int, window_height: int):
     window_y = int((screen.height() - window_height) / 2)
     obj.move(window_x, window_y)
     obj.setFixedSize(window_width, window_height)
+
+def clear_layout(widget):
+    old_layout = widget.layout()
+    if old_layout:
+        tmp_widget = QWidget()
+        tmp_widget.setLayout(old_layout)
+        del tmp_widget
+    return None
 
 def get_separate_line(color:str="#fff", thickness:int=1, line_type=QFrame.HLine, shadow=QFrame.Sunken):
     separate_line = QFrame()

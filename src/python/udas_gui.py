@@ -185,10 +185,11 @@ class MainContent:
 
         # status area
         widget_status = QWidget()
-        widget_status.setFixedSize(360, 75)
+        widget_status.setFixedSize(360, 90)
 
         layout_status = QVBoxLayout()
         layout_status_info = QHBoxLayout()
+        layout_status_info.setContentsMargins(0, 10, 0, 0)
 
         # status area: create labels
         label_title_status = QLabel("<b>USB Storage Registration Status</b>")
@@ -213,15 +214,16 @@ class MainContent:
 
         # service area
         widget_service = QWidget()
-        widget_service.setFixedSize(360, 75)
+        widget_service.setFixedSize(360, 90)
 
         layout_service = QVBoxLayout()
         layout_service_info = QHBoxLayout()
+        layout_service_info.setContentsMargins(0, 10, 0, 0)
 
         # service area: create widget
         label_title_service = QLabel(f"<b>UDAS Service</b>")
-        label_service_status = QLabel(" * Status: Running")
-        label_service_uptime = QLabel(" * Uptime: 30 Min")
+        label_service_status = QLabel(" * STATUS : Running")
+        label_service_uptime = QLabel(" * UPTIME : 30 Min")
 
         # service area: set size of widgets
         label_title_service.setFixedSize(360, 25)
@@ -243,7 +245,7 @@ class MainContent:
         layout.addWidget(widget_service)
         layout.addStretch()
         content_widget.setLayout(layout)
-
+        return
 
     @staticmethod
     def management(content_widget):

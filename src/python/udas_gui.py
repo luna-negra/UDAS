@@ -343,10 +343,13 @@ from udas.udas_custom_widget import (CustomDialogPasswordInput,
                                      custom_fixed_push_button,
                                      custom_label,
                                      custom_labels_kv,
+                                     custom_label_button_for_control,
+                                     custom_separate_line,
                                      custom_splitter_fixed,
                                      custom_widget_for_layout)
 
 
+COLOR_SEPARATE_LINE: str = "#333"
 DIALOG_PASSWORD_TITLE: str = "UDAS Authentication"
 DIALOG_PASSWORD_WIDTH: int = 400
 DIALOG_PASSWORD_HEIGHT: int = 200
@@ -371,6 +374,7 @@ BUTTON_SIDEBAR_STYLE: str = """
         font-weight: 600;
     }
 """
+BUTTON_GENERAL_STYLE: str = BUTTON_SIDEBAR_STYLE
 
 
 class MainWindow(QMainWindow):
@@ -479,7 +483,8 @@ class MainWindow(QMainWindow):
         clear_layout(self.widget_main_content)
 
         # get KPI data.
-        data: dict = self.__read_kpi_data()
+        status_data: dict = self.__read_status_kpi_data()
+        service_data: dict = self.__read_service_kpi_data()
 
         # set the size of widgets
         total_width_half: int = int(WIDGET_MAIN_CONTENT_WIDTH / 2)
@@ -491,51 +496,54 @@ class MainWindow(QMainWindow):
                                              width=WIDGET_MAIN_CONTENT_WIDTH,
                                              height=height)
         label_status_whitelist = custom_labels_kv(total_width=total_width_half,
-                                                  total_height=height,
+                                                  height=height,
                                                   ratio=key_width,
                                                   key="Whitelist",
-                                                  value=data.get("whitelist"),
+                                                  value=status_data.get("whitelist"),
                                                   align="center"
                                                   )
         label_status_blacklist = custom_labels_kv(total_width=total_width_half,
-                                                  total_height=height,
+                                                  height=height,
                                                   ratio=key_width,
                                                   key="Blacklist",
-                                                  value=data.get("blacklist"))
-
+                                                  value=status_data.get("blacklist"))
         layout_status_info = custom_box_layout(children=[label_status_whitelist, label_status_blacklist],
-                                               vertical=False,)
-        layout_status = custom_box_layout(children=[label_status_preamble, layout_status_info],)
+                                               vertical=False,
+                                               margin_l=0,
+                                               margin_t=0)
 
         # service widgets and layout
         label_service_preamble = custom_label(text="<b>Status of UDAS Service</b>",
                                              width=WIDGET_MAIN_CONTENT_WIDTH,
                                              height=height)
         label_service_status = custom_labels_kv(total_width=WIDGET_MAIN_CONTENT_WIDTH,
-                                                total_height=height,
+                                                height=height,
                                                 ratio=key_width,
                                                 key="STATUS",
-                                                value=data.get("is_running"),
+                                                value=service_data.get("is_running"),
                                                 align="center")
         label_service_start = custom_labels_kv(total_width=WIDGET_MAIN_CONTENT_WIDTH,
-                                                total_height=height,
+                                                height=height,
                                                 ratio=key_width,
                                                 key="START DATETIME",
-                                                value=data.get("start_dt"),
+                                                value=service_data.get("start_dt"),
                                                 align="center")
         label_service_uptime = custom_labels_kv(total_width=WIDGET_MAIN_CONTENT_WIDTH,
-                                                total_height=height,
+                                                height=height,
                                                 ratio=key_width,
                                                 key="UPTIME",
-                                                value=data.get("uptime"))
+                                                value=service_data.get("uptime"))
 
+        layout_status = custom_box_layout(children=[label_status_preamble, layout_status_info], )
         layout_service = custom_box_layout(children=[label_service_preamble,
                                                      label_service_status,
                                                      label_service_start,
                                                      label_service_uptime],)
-
-
-        layout = custom_box_layout(children=[layout_status, layout_service],)
+        layout = custom_box_layout(children=[layout_status,
+                                             custom_separate_line(color=COLOR_SEPARATE_LINE),
+                                             layout_service],
+                                   margin_l=20,
+                                   margin_t=20,)
         self.widget_main_content.setLayout(layout)
         return None
 
@@ -543,23 +551,49 @@ class MainWindow(QMainWindow):
         clear_layout(self.widget_main_content)
         return None
 
-    def __read_kpi_data(self) -> dict:
-        service_data = get_service_status()
-
-        result = {
+    def __read_status_kpi_data(self) -> dict:
+        return {
             "whitelist": get_whitelist_num(),
             "blacklist": get_blacklist_num(),
+        }
+
+    def __read_service_kpi_data(self):
+        service_data = get_service_status()
+        return {
             "is_running": service_data.get("is_running"),
             "start_dt": service_data.get("start_dt"),
             "uptime": service_data.get("uptime")
         }
-        return result
 
     def __settings(self):
         clear_layout(self.widget_main_content)
 
+        # get data
+        service_data = self.__read_service_kpi_data()
 
+        # set the size of widgets
+        total_width = WIDGET_MAIN_CONTENT_WIDTH
+        button_width: int = 50
+        height: int = 30
 
+        label_settings_preamble = custom_label(text="<b>UDAS Settings</b>",
+                                               width=total_width,
+                                               height=30)
+        widget_layout_ctrl_service = custom_label_button_for_control(total_width=total_width,
+                                                                     height=height,
+                                                                     ratio=0.7,
+                                                                     info_text="UDAS Service On / Off",
+                                                                     button_width=button_width,
+                                                                     button_text="OFF" if "running" in service_data.get("is_running") else "ON",
+                                                                     button_style=BUTTON_GENERAL_STYLE,
+                                                                     )
+
+        layout = custom_box_layout(children=[label_settings_preamble,
+                                             widget_layout_ctrl_service,
+                                             custom_separate_line(color=COLOR_SEPARATE_LINE)],
+                                   margin_l=20,
+                                   margin_t=20,)
+        self.widget_main_content.setLayout(layout)
 
         return None
 

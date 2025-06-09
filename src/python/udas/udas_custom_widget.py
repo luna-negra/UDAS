@@ -19,10 +19,10 @@ def custom_box_layout(children: list,
                       stretch: bool = True,
                       align: str = "center",
                       spacing: int = 10,
-                      margin_l: int = 10,
-                      margin_t: int = 10,
-                      margin_r: int = 10,
-                      margin_b: int = 10) -> QVBoxLayout | QHBoxLayout:
+                      margin_l: int = 0,
+                      margin_t: int = 0,
+                      margin_r: int = 0,
+                      margin_b: int = 0) -> QVBoxLayout | QHBoxLayout:
     l = QVBoxLayout() if vertical else QHBoxLayout()
 
     for child in children:
@@ -73,7 +73,8 @@ def custom_fixed_push_button(text: str,
     b = QPushButton(text)
     b.setFixedSize(width, height)
     b.setStyleSheet(style)
-    b.clicked.connect(connect)
+    if connect is not None:
+        b.clicked.connect(connect)
     b.setStatusTip(status_tip)
     b.setDefault(default)
     b.setEnabled(enable)
@@ -126,25 +127,24 @@ def custom_widget_for_layout(width: int, height: int, style: str | None = None) 
 
 
 def custom_labels_kv(total_width: int,
-                     total_height: int,
+                     height: int,
                      key:str,
                      value: str,
                      ratio: float,
-                     key_height: int | None = None,
                      style: str | None = None,
                      key_style: str | None = None,
                      value_style: str | None = None,
                      align:str = "center",
-                     spacing: int = 10):
+                     spacing: int = 10) -> QWidget:
 
     key = f" ・ {key} : "
     label_key = custom_label(text=key,
                              width=int(total_width * ratio),
-                             height=key_height or total_height,
+                             height=height,
                              style=key_style)
     label_value = custom_label(text=value,
                                width=int(total_width * (1 - ratio)),
-                               height=key_height or total_height,
+                               height=height,
                                style=value_style)
     layout = custom_box_layout(children=[label_key, label_value],
                                vertical=False,
@@ -155,7 +155,45 @@ def custom_labels_kv(total_width: int,
                                margin_t=0,
                                margin_b=0)
     widget = custom_widget_for_layout(width=total_width,
-                                      height=total_height,
+                                      height=height,
+                                      style=style)
+    widget.setLayout(layout)
+    return widget
+
+def custom_label_button_for_control(total_width: int,
+                                    height: int,
+                                    ratio: float,
+                                    info_text: str,
+                                    button_text: str,
+                                    button_width: int,
+                                    style: str | None = None,
+                                    info_style: str | None = None,
+                                    button_style: str | None = None,
+                                    align: str = "center",
+                                    spacing: int = 10,
+                                    button_status_tip: str = "",
+                                    connect: Any = None) -> QWidget:
+    info_text = f" ・ {info_text}: "
+    label_info = custom_label(text=info_text,
+                              width=int(total_width * ratio),
+                              height=height,
+                              style=info_style)
+    btn_ctrl = custom_fixed_push_button(text=button_text,
+                                        width=button_width,
+                                        height=height,
+                                        style=button_style,
+                                        connect=connect,
+                                        status_tip=button_status_tip)
+    layout = custom_box_layout(children=[label_info, btn_ctrl],
+                               vertical=False,
+                               align=align,
+                               spacing=spacing,
+                               margin_l=0,
+                               margin_t=0,
+                               margin_r=0,
+                               margin_b=0)
+    widget = custom_widget_for_layout(width=total_width,
+                                      height=height,
                                       style=style)
     widget.setLayout(layout)
     return widget

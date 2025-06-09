@@ -81,15 +81,15 @@ def get_blacklist_num() -> str:
     return "None"
 
 def get_service_status() -> dict:
-    ret_value = {"is_running": "Stopped", "start_dt": "",  "uptime": "0 Min"}
+    ret_value = {"is_running": "ERROR", "start_dt": "ERROR",  "uptime": "ERROR"}
     run_result = run("systemctl status docker | head -n 3 | tail -n 1", stdout=PIPE, stderr=PIPE, shell=True)
     if run_result.returncode == 0:
         tmp = run_result.stdout.decode(ENCODING).split()
         ret_value["is_running"] = f"{tmp[2].strip('()')} ({tmp[1]})"
         ret_value["start_dt"] = f"{tmp[5]} {tmp[6]} {tmp[7].strip(';')}"
         ret_value["uptime"] = f"{tmp[-3]} {tmp[-2]}"
-        return ret_value
-    return "ERROR"
+    return ret_value
+
 
 def get_whitelist_num() -> str:
     run_result = run(f"wc -l {WHITELIST_PATH}", stdout=PIPE, stderr=PIPE, shell=True)

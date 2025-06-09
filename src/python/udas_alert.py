@@ -1,9 +1,8 @@
-from udas_pytool import (sys,
-                         QScreen,
-                         QApplication,
-                         QMessageBox,
-                         centralise,
-                         PasswordInputDialog)
+from udas.udas_pytool import (sys,
+                              QApplication,
+                              QMessageBox,
+                              centralise_fixed,)
+from udas.udas_custom_widget import CustomDialogPasswordInput
 
 
 def get_usb_info(options: tuple) -> dict:
@@ -25,7 +24,7 @@ class AlertNewUSB(QMessageBox):
     def __init__(self, args):
         super().__init__()
         self.setWindowTitle("UDAS Alert")
-        centralise(self, 400, 200)
+        centralise_fixed(self, 400, 200)
         self.init_ui(args)
 
     def init_ui(self, options: tuple):
@@ -53,6 +52,6 @@ if __name__ == "__main__":
     if msg_box_result != QMessageBox.Yes:
         sys.exit(-1)
 
-    dialog = PasswordInputDialog(sys.argv)
+    dialog = CustomDialogPasswordInput()
     result = dialog.exec()
     sys.exit(app.quit())

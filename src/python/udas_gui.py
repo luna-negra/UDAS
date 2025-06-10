@@ -1,352 +1,26 @@
-"""
-from udas.udas_pytool import (sys,
-                             Qt,
-                             QApplication,
-                             QMainWindow,
-                             QWidget,
-                             QSplitter,
-                             QVBoxLayout,
-                             QHBoxLayout,
-                             QMenu,
-                             QAction,
-                             QIcon,
-                             QKeySequence,
-                             QPushButton,
-                             QLabel,
-                             BUTTON_STYLE,
-                             ConfigIni,
-                             centralise,
-                             clear_layout,
-                             get_separate_line,
-                             )
-
-
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-
-        # set title of main window
-        self.setWindowTitle("UDAS")
-
-        # centralize
-        centralise(self, 600, 400)
-
-        # set ui
-        self.__init_ui()
-
-    def __init_ui(self):
-        # create menu bar
-        self.__create_menubar()
-
-        # set status bar
-        self.statusBar().setStyleSheet("color: #888;")
-
-        # create central widget for main window.
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        self.__create_layout()
-        self.__create_sidebar()
-
-    def __create_menubar(self):
-        def set_menu_structure(p_menu, menu_structure):
-            menus = menu_structure["menus"]
-            actions = menu_structure["actions"]
-
-            for menu_name, menu_info in menus.items():
-                icon = menu_info.get("icon")
-                sub_menu = QMenu(menu_name, icon=QIcon(icon))
-                p_menu.addMenu(sub_menu)
-                set_menu_structure(sub_menu, menu_info)
-
-            for action in actions:
-                if action.get("name") == "sep":
-                    p_menu.addSeparator()
-                    continue
-
-                sub_action = QAction(QIcon(action.get("icon")), action.get("name"), self)
-
-                if action.get("connect") is not None:
-                    sub_action.triggered.connect(action.get("connect"))
-
-                sub_action.setShortcut(QKeySequence(action.get("shortcut")))
-                sub_action.setStatusTip(action.get("status"))
-                p_menu.addAction(sub_action)
-
-        # define menubar structure
-        menu: dict = {
-            "icon": "",
-            "menus":
-            {
-                "File":
-                {
-                    "icon": "",
-                    "menus": {},
-                    "actions": [
-                        {"name": "reload", "shortcut": "Ctrl+r", "icon": "", "status": "Update data", "connect": None},
-                        {"name": "sep", "shortcut": "", "icon": "", "status": "", "connect": None},
-                        {"name": "exit", "shortcut": "Ctrl+F4", "icon": "", "status": "Exit UDAS", "connect": self.__exit},
-                    ]
-                },
-                "Help":
-                {
-                    "icon": "",
-                    "menus": {},
-                    "actions": [
-                        {"name": "help", "shortcut": "F1", "icon": "", "status": "Help", "connect": None},
-                        {"name": "about", "shortcut": "F2", "icon": "", "status": "About", "connect": None},
-                    ]
-                }
-            },
-            "actions": []
-        }
-
-        # apply menu structure.
-        set_menu_structure(self.menuBar(), menu)
-        return None
-
-    def __create_layout(self):
-        # create main layout to store splitter
-        main_layout = QHBoxLayout()
-
-        # create splitter
-        splitter = QSplitter()
-
-        # settings for splitter
-        splitter.setOrientation(Qt.Horizontal)
-        #splitter.setEnabled(False)
-        splitter.setStyleSheet("border: 1px solid #333;")
-
-        self.sidebar_widget = QWidget()
-        self.sidebar_widget.setFixedWidth(150)
-        self.content_widget = QWidget()
-        self.content_widget.setStyleSheet("border: none")
-
-        # set main content
-        MainContent.main(self.content_widget)
-
-        splitter.addWidget(self.sidebar_widget)
-        splitter.addWidget(self.content_widget)
-
-        main_layout.addWidget(splitter)
-        self.centralWidget().setLayout(main_layout)
-        return None
-
-    def __create_sidebar(self):
-        # create sidebar layout
-        sidebar_layout = QVBoxLayout()
-
-        # create buttons in sidebar
-        btn_main = QPushButton("Main")
-        btn_mgmt = QPushButton("Management")
-        btn_settings = QPushButton("Settings")
-        btn_log = QPushButton("Logging")
-
-        # btn size
-        btn_main.setFixedSize(150, 50)
-        btn_mgmt.setFixedSize(150, 50)
-        btn_settings.setFixedSize(150, 50)
-        btn_log.setFixedSize(150, 50)
-
-        btn_main.setStyleSheet(BUTTON_STYLE)
-        btn_mgmt.setStyleSheet(BUTTON_STYLE)
-        btn_settings.setStyleSheet(BUTTON_STYLE)
-        btn_log.setStyleSheet(BUTTON_STYLE)
-
-        # btn set status bar
-        btn_main.setStatusTip("Main")
-        btn_mgmt.setStatusTip("USB Management")
-        btn_settings.setStatusTip("Config UDAS setting")
-        btn_log.setStatusTip("Show UDAS log")
-
-        # connect slot
-        btn_main.clicked.connect(lambda: MainContent.main(self.content_widget))
-        btn_mgmt.clicked.connect(lambda: MainContent.management(self.content_widget))
-        btn_settings.clicked.connect(lambda: MainContent.settings(self.content_widget))
-        btn_log.clicked.connect(lambda: MainContent.log(self.content_widget))
-
-        # add btns to layout
-        sidebar_layout.addWidget(btn_main)
-        sidebar_layout.addWidget(btn_mgmt)
-        sidebar_layout.addWidget(btn_settings)
-        sidebar_layout.addWidget(btn_log)
-
-        # etc settings
-        sidebar_layout.addStretch()
-        sidebar_layout.setContentsMargins(0, 0, 0, 0)
-
-        self.sidebar_widget.setLayout(sidebar_layout)
-        return None
-
-    def __exit(self):
-        sys.exit(0)
-
-
-class MainContent:
-    _CONFIG = ConfigIni()
-
-    @staticmethod
-    def main(content_widget):
-        clear_layout(content_widget)
-
-        layout = QVBoxLayout()
-        layout.setContentsMargins(20, 10, 20, 10)
-
-        # status area
-        widget_status = QWidget()
-        widget_status.setFixedSize(360, 90)
-
-        layout_status = QVBoxLayout()
-        layout_status_info = QHBoxLayout()
-        layout_status_info.setContentsMargins(0, 10, 0, 0)
-
-        # status area: create labels
-        label_title_status = QLabel("<b>USB Storage Registration Status</b>")
-        label_whitelist = QLabel(" * WHITELIST : 2")
-        label_blacklist = QLabel(" * BLACKLIST : 7")
-
-        # status area: set size of labels
-        label_title_status.setFixedSize(360, 25)
-        label_whitelist.setFixedSize(180, 25)
-        label_blacklist.setFixedSize(180, 25)
-
-        # status area: add info labels into layout_status_info
-        layout_status_info.addWidget(label_whitelist)
-        layout_status_info.addWidget(label_blacklist)
-        layout_status_info.addStretch()
-
-        # status area: end
-        layout_status.addWidget(label_title_status)
-        layout_status.addLayout(layout_status_info)
-        layout_status.addStretch()
-        widget_status.setLayout(layout_status)
-
-        # service area
-        widget_service = QWidget()
-        widget_service.setFixedSize(360, 90)
-
-        layout_service = QVBoxLayout()
-        layout_service_info = QHBoxLayout()
-        layout_service_info.setContentsMargins(0, 10, 0, 0)
-
-        # service area: create widget
-        label_title_service = QLabel(f"<b>UDAS Service</b>")
-        label_service_status = QLabel(" * STATUS : Running")
-        label_service_uptime = QLabel(" * UPTIME : 30 Min")
-
-        # service area: set size of widgets
-        label_title_service.setFixedSize(360, 25)
-        label_service_status.setFixedSize(180, 25)
-        label_service_uptime.setFixedSize(180, 25)
-
-        # service area: add info labels into layout_service_info
-        layout_service_info.addWidget(label_service_status)
-        layout_service_info.addWidget(label_service_uptime)
-        layout_service_info.addStretch()
-        widget_service.setLayout(layout_service)
-
-        # service area: end
-        layout_service.addWidget(label_title_service)
-        layout_service.addLayout(layout_service_info)
-
-        layout.addWidget(widget_status)
-        layout.addWidget(get_separate_line(color="#555"))
-        layout.addWidget(widget_service)
-        layout.addStretch()
-        content_widget.setLayout(layout)
-        return
-
-    @staticmethod
-    def management(content_widget):
-        print("Management")
-
-    @staticmethod
-    def settings(content_widget):
-        clear_layout(content_widget)
-
-        layout = QVBoxLayout()
-        layout.setContentsMargins(20, 10, 20, 10)
-
-        # widget for version information
-        widget_version = QWidget()
-        widget_version.setFixedSize(360, 90)
-
-        layout_version = QVBoxLayout()
-        layout_version_info = QHBoxLayout()
-        layout_version_info.setContentsMargins(0, 10, 0, 0)
-
-        label_version = QLabel("<b>Version Information</b>")
-        label_version_info = QLabel(f" * UDAS VERSION {MainContent._CONFIG.get_version()} BETA")
-        label_version.setFixedSize(360, 25)
-        label_version_info.setFixedSize(360, 25)
-
-        layout_version_info.addWidget(label_version_info)
-        layout_version.addWidget(label_version)
-        layout_version.addLayout(layout_version_info)
-        layout_version.addStretch()
-        widget_version.setLayout(layout_version)
-
-        # widget for
-        widget_service = QWidget()
-        widget_service.setFixedSize(360, 90)
-
-        layout_service = QVBoxLayout()
-        layout_service_ctrl = QHBoxLayout()
-
-        label_service = QLabel("<b>UDAS Service</b>")
-        label_service_info = QLabel(" Service Control")
-        btn_service_sw = QPushButton()
-        btn_service_sw.setFlat(False)
-        btn_service_sw.setFixedSize(100, 25)
-        btn_service_sw.setStyleSheet(BUTTON_STYLE)
-
-        text = "On" if True else "Off"
-        btn_service_sw.setText(text)
-
-        label_service.setFixedSize(360, 25)
-        label_service_info.setFixedSize(240, 25)
-
-        layout_service_ctrl.addWidget(label_service_info)
-        layout_service_ctrl.addWidget(btn_service_sw)
-        layout_service_ctrl.addStretch()
-
-        layout_service.addWidget(label_service)
-        layout_service.addLayout(layout_service_ctrl)
-        layout_service.addStretch()
-        widget_service.setLayout(layout_service)
-
-
-
-
-        layout.addWidget(widget_version)
-        layout.addWidget(get_separate_line(color="#555"))
-        layout.addWidget(widget_service)
-        layout.addStretch()
-        content_widget.setLayout(layout)
-        return
-
-    @staticmethod
-    def log(content_widget):
-        print("Log")
-"""
-
 from udas.udas_pytool import (QMainWindow,
                               QApplication,
+                              ConfigIni,
                               centralise_fixed,
                               clear_layout,
                               create_menubar,
-                              get_blacklist_num,
+                              get_rules,
+                              get_rule_num,
                               get_service_status,
-                              get_whitelist_num,
-                              sys)
+                              sys,
+                              QLabel, Qt)
 from udas.udas_custom_widget import (CustomDialogPasswordInput,
+                                     CustomTableWithOneButton,
                                      custom_box_layout,
-                                     custom_fixed_push_button,
+                                     custom_label_combobox_for_control,
+                                     custom_push_button,
                                      custom_label,
                                      custom_labels_kv,
                                      custom_label_button_for_control,
                                      custom_separate_line,
                                      custom_splitter_fixed,
-                                     custom_widget_for_layout)
+                                     custom_table,
+                                     custom_widget_for_layout,)
 
 
 COLOR_SEPARATE_LINE: str = "#333"
@@ -355,7 +29,7 @@ DIALOG_PASSWORD_WIDTH: int = 400
 DIALOG_PASSWORD_HEIGHT: int = 200
 MAIN_WINDOW_TITLE: str = "USB Docking Authentication System"
 MAIN_WINDOW_WIDTH: int = 600
-MAIN_WINDOW_HEIGHT: int = 400
+MAIN_WINDOW_HEIGHT: int = 450
 WIDGET_SIDEBAR_WIDTH: int = 150
 WIDGET_SIDEBAR_HEIGHT: int = MAIN_WINDOW_HEIGHT
 WIDGET_SIDEBAR_STYLE: str = "border: 1px solid #333;"
@@ -375,11 +49,15 @@ BUTTON_SIDEBAR_STYLE: str = """
     }
 """
 BUTTON_GENERAL_STYLE: str = BUTTON_SIDEBAR_STYLE
+LAYOUT_MAIN_CONTENT_MARGIN:int = 20
 
 
 class MainWindow(QMainWindow):
     def __init__(self, **kwargs):
         super().__init__()
+        # get config
+        self.__config = ConfigIni()
+
         # set window structure
         self.__init_ui(kwargs)
 
@@ -397,11 +75,7 @@ class MainWindow(QMainWindow):
                             "icon": "",
                             "menus": {},
                             "actions": [
-                                {"name": "reload", "shortcut": "Ctrl+r", "icon": "", "status": "Update data",
-                                 "connect": None},
-                                {"name": "sep", "shortcut": "", "icon": "", "status": "", "connect": None},
-                                {"name": "exit", "shortcut": "Ctrl+F4", "icon": "", "status": "Exit UDAS",
-                                 "connect": self.__exit},
+                                {"name": "exit", "shortcut": "Ctrl+F4", "icon": "", "status": "Exit UDAS", "connect": self.__exit},
                             ]
                         },
                     "Help":
@@ -444,17 +118,18 @@ class MainWindow(QMainWindow):
             },
         }
 
-        children_btns = [ custom_fixed_push_button(text=text,
-                                                   width=BUTTON_SIDEBAR_WIDTH,
-                                                   height=BUTTON_SIDEBAR_HEIGHT,
-                                                   status_tip=config.get("status") or None,
-                                                   style=config.get("style") or BUTTON_SIDEBAR_STYLE,
-                                                   connect=config.get("connect") or None) for text, config in children_widget_info.items()]
+        children_btns = [ custom_push_button(text=text,
+                                             width=BUTTON_SIDEBAR_WIDTH,
+                                             height=BUTTON_SIDEBAR_HEIGHT,
+                                             status_tip=config.get("status") or None,
+                                             style=config.get("style") or BUTTON_SIDEBAR_STYLE,
+                                             connect=config.get("connect") or None) for text, config in children_widget_info.items()]
 
         layout_sidebar = custom_box_layout(children=children_btns,
                                            align="top",
                                            margin_l=0,
                                            margin_t=10)
+
         self.widget_sidebar.setLayout(layout_sidebar)
         return None
 
@@ -542,19 +217,128 @@ class MainWindow(QMainWindow):
         layout = custom_box_layout(children=[layout_status,
                                              custom_separate_line(color=COLOR_SEPARATE_LINE),
                                              layout_service],
-                                   margin_l=20,
-                                   margin_t=20,)
+                                   margin_l=LAYOUT_MAIN_CONTENT_MARGIN,
+                                   margin_t=LAYOUT_MAIN_CONTENT_MARGIN,)
         self.widget_main_content.setLayout(layout)
         return None
 
     def __mgmt(self):
         clear_layout(self.widget_main_content)
+
+        # set the size of widgets
+        button_width = 140
+        height = 30
+        margin = 20
+        table_height = 100
+        table_header = ["Vendor", "Product", "Serial", ]
+        width = WIDGET_MAIN_CONTENT_WIDTH - LAYOUT_MAIN_CONTENT_MARGIN * 2
+
+        """
+        label_whitelist = custom_label(text="<b>WHITELIST</b>",
+                                       width=width,
+                                       height=height)
+
+        table_whitelist = custom_table(total_width=width,
+                                       total_height=table_height,
+                                       header_label=table_header,
+                                       table_data=get_rules(),
+                                       is_resize_column_to_contents=False,)
+
+        layout_button_whitelist = custom_label_button_for_control(total_width=width,
+                                                                  height=height,
+                                                                  ratio=0.7,
+                                                                  info_text="",
+                                                                  button_text="Remove Whitelist",
+                                                                  button_width=button_width,
+                                                                  button_enable=False,
+                                                                  button_style=BUTTON_GENERAL_STYLE)
+
+        label_blacklist = custom_label(text="<b>BLACKLIST</b>",
+                                       width=width,
+                                       height=height)
+
+        table_blacklist = custom_table(total_width=width,
+                                       total_height=table_height,
+                                       header_label=table_header,
+                                       table_data=get_rules(is_white=False),
+                                       is_resize_column_to_contents=False,)
+
+        layout_button_blacklist = custom_label_button_for_control(total_width=width,
+                                                                  height=height,
+                                                                  ratio=0.7,
+                                                                  info_text="",
+                                                                  button_text="Remove Blacklist",
+                                                                  button_enable=False,
+                                                                  button_width=button_width,
+                                                                  button_style=BUTTON_GENERAL_STYLE)
+
+        layout = custom_box_layout(children=[label_whitelist,
+                                             table_whitelist,
+                                             layout_button_whitelist,
+                                             custom_separate_line(color=COLOR_SEPARATE_LINE),
+                                             label_blacklist,
+                                             table_blacklist,
+                                             layout_button_blacklist,],
+                                   margin_l=LAYOUT_MAIN_CONTENT_MARGIN,
+                                   margin_t=LAYOUT_MAIN_CONTENT_MARGIN)
+
+        self.widget_main_content.setLayout(layout)
+        """
+
+        widget_table_button_whitelist = CustomTableWithOneButton(
+            total_width=width,
+            label_height=height,
+            label_text="<b>WHITELIST</b>",
+            table_height=table_height,
+            table_header=table_header,
+            table_data=get_rules(),
+            ratio=0.7,
+            align="right",
+            button_width=button_width,
+            button_height=height,
+            button_text="Remove Whitelist",
+            button_style=BUTTON_GENERAL_STYLE,
+            button_enable=False,
+            button_status_tip="Remove selected whitelist...",
+            margin_l=margin,
+            margin_t=margin,
+            margin_r=margin,
+            margin_b=margin,
+        )
+
+        widget_table_button_blacklist = CustomTableWithOneButton(
+            total_width=width,
+            label_height=height,
+            label_text="<b>BLACKLIST</b>",
+            table_height=table_height,
+            table_header=table_header,
+            table_data=get_rules(is_white=False),
+            ratio=0.7,
+            align="right",
+            button_width=button_width,
+            button_height=height,
+            button_text="Remove Blacklist",
+            button_style=BUTTON_GENERAL_STYLE,
+            button_enable=False,
+            button_status_tip="Remove selected blacklist...",
+        )
+
+        layout_test = custom_box_layout(children=[widget_table_button_whitelist,
+                                                  custom_separate_line(color=COLOR_SEPARATE_LINE),
+                                                  widget_table_button_blacklist],
+                                        margin_l=20,
+                                        margin_t=20,
+                                        margin_r=20,
+                                        margin_b=20)
+
+        self.widget_main_content.setLayout(layout_test)
         return None
+
 
     def __read_status_kpi_data(self) -> dict:
         return {
-            "whitelist": get_whitelist_num(),
-            "blacklist": get_blacklist_num(),
+            "whitelist": get_rule_num(),
+            "blacklist": get_rule_num(is_white=False),
         }
 
     def __read_service_kpi_data(self):
@@ -573,28 +357,65 @@ class MainWindow(QMainWindow):
 
         # set the size of widgets
         total_width = WIDGET_MAIN_CONTENT_WIDTH
-        button_width: int = 50
+        button_width: int = 80
+        combobox_width: int = 120
         height: int = 30
 
         label_settings_preamble = custom_label(text="<b>UDAS Settings</b>",
                                                width=total_width,
                                                height=30)
+
         widget_layout_ctrl_service = custom_label_button_for_control(total_width=total_width,
                                                                      height=height,
                                                                      ratio=0.7,
-                                                                     info_text="UDAS Service On / Off",
+                                                                     info_text="UDAS Service [On / Off]",
                                                                      button_width=button_width,
                                                                      button_text="OFF" if "running" in service_data.get("is_running") else "ON",
                                                                      button_style=BUTTON_GENERAL_STYLE,
-                                                                     )
+                                                                     status_tip="Run or Stop UDAS Detecting Service...")
+
+        widget_layout_ctrl_blacklist = custom_label_button_for_control(total_width=total_width,
+                                                                       height=height,
+                                                                       ratio=0.7,
+                                                                       info_text="Apply Blacklist [On / Off]",
+                                                                       button_width=button_width,
+                                                                       button_text="OFF" if self.__config.get_blacklist() else "ON",
+                                                                       button_style=BUTTON_GENERAL_STYLE,
+                                                                       status_tip="Edit blacklist setting...")
+
+        widget_layout_ctrl_password = custom_label_button_for_control(total_width=total_width,
+                                                                      height=height,
+                                                                      ratio=0.7,
+                                                                      info_text="Change UDAS Password",
+                                                                      button_width=button_width,
+                                                                      button_text="Change",
+                                                                      button_style=BUTTON_GENERAL_STYLE,
+                                                                      status_tip="Change UDAS Password...")
+
+        label_logging_preamble = custom_label(text="<b>Logging</b>",
+                                               width=total_width,
+                                               height=30)
+
+        widget_layout_ctrl_loglevel = custom_label_combobox_for_control(total_width=total_width,
+                                                                        height=height,
+                                                                        ratio=0.6,
+                                                                        info_text="UDAS Log Level",
+                                                                        combobox_width=combobox_width,
+                                                                        combobox_items=["CRITICAL", "INFO"],
+                                                                        default_item=self.__config.get_log_level(),
+                                                                        status_tip="Change log level...",)
 
         layout = custom_box_layout(children=[label_settings_preamble,
                                              widget_layout_ctrl_service,
-                                             custom_separate_line(color=COLOR_SEPARATE_LINE)],
-                                   margin_l=20,
-                                   margin_t=20,)
-        self.widget_main_content.setLayout(layout)
+                                             widget_layout_ctrl_blacklist,
+                                             widget_layout_ctrl_password,
+                                             custom_separate_line(color=COLOR_SEPARATE_LINE),
+                                             label_logging_preamble,
+                                             widget_layout_ctrl_loglevel],
+                                   margin_l=LAYOUT_MAIN_CONTENT_MARGIN,
+                                   margin_t=LAYOUT_MAIN_CONTENT_MARGIN,)
 
+        self.widget_main_content.setLayout(layout)
         return None
 
     def __set_layout(self):
@@ -625,7 +446,6 @@ if __name__ == "__main__":
                                           height=DIALOG_PASSWORD_HEIGHT)
     pw_dialog.exec()
     """
-
     # main window.
     window = MainWindow(title="USB Docking Authentication System",
                         width=MAIN_WINDOW_WIDTH,

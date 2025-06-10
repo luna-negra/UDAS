@@ -1,5 +1,6 @@
 import sys
 import configparser
+import re
 from subprocess import (run,
                         PIPE,)
 from PySide6.QtCore import Qt
@@ -8,6 +9,7 @@ from PySide6.QtGui import (QScreen,
                            QIcon,
                            QKeySequence,)
 from PySide6.QtWidgets import (QApplication,
+                               QAbstractItemView,
                                QMainWindow,
                                QWidget,
                                QDialog,
@@ -17,8 +19,11 @@ from PySide6.QtWidgets import (QApplication,
                                QVBoxLayout,
                                QHBoxLayout,
                                QListWidget,
+                               QListWidgetItem,
                                QTableWidget,
+                               QTableWidgetItem,
                                QCheckBox,
+                               QComboBox,
                                QLineEdit,
                                QPushButton,
                                QLabel,
@@ -30,6 +35,11 @@ BLACKLIST_PATH: str = "/etc/udev/rules.d/99-udas.blacklist.rules"
 ENCODING: str ="utf-8"
 CONFIG_PATH: str = "../../config/config.ini"
 WHITELIST_PATH: str = "/etc/udev/rules.d/99-udas.custom.rules"
+RULE_REGEX = r'ACTION=="add", SUBSYSTEM=="block", ATTRS{idVendor}=="(?P<id_vendor>[A-z0-9]{4})", ATTRS{idProduct}=="(?P<id_product>[A-z0-9]{4})",.+, ENV{UDISKS_IGNORE}="(?P<ignore>[01])"'
+SERIAL_REGEX = r'ATTRS{serial}=="(?P<serial>[A-z0-9]+)"'
+MANUFACTURER_REGEX= r'ATTRS{manufacturer}=="(?P<manufacturer>[A-z0-9]+)"'
+PRODUCT_REGEX= r'ATTRS{product}=="(?P<product>[A-z0-9]+)"'
+
 
 def centralise_fixed(obj, width: int, height: int):
     screen = QScreen.availableGeometry(QApplication.primaryScreen())
@@ -70,15 +80,47 @@ def create_menubar(p_menu, menu_structure, widget):
         sub_action.setShortcut(QKeySequence(action.get("shortcut")))
         sub_action.setStatusTip(action.get("status"))
         p_menu.addAction(sub_action)
-
     return None
 
-def get_blacklist_num() -> str:
-    run_result = run(f"wc -l {BLACKLIST_PATH}", stdout=PIPE, stderr=PIPE, shell=True)
+
+def get_rules(is_white: bool=True) -> list:
+    result = []
+    file_path: str = WHITELIST_PATH if is_white else BLACKLIST_PATH
+    code: str = "0" if is_white else "1"
+
+    run_result = run(f"cat {file_path}", stdout=PIPE, stderr=PIPE, shell=True)
+    if run_result.returncode == 0:
+        whitelist_regex = re.compile(RULE_REGEX)
+
+        for line in run_result.stdout.decode(ENCODING).split("\n"):
+            regex_result = whitelist_regex.search(line)
+
+            if regex_result is None:
+                continue
+
+            tmp = list(regex_result.groups())
+            if tmp[-1] != code:
+                continue
+
+            manufacturer = re.compile(MANUFACTURER_REGEX).search(line)
+            product = re.compile(PRODUCT_REGEX).search(line)
+            serial = re.compile(SERIAL_REGEX).search(line)
+
+            group: list = [
+                f"{manufacturer.group(manufacturer.lastgroup)} ({tmp[0]})" if manufacturer is not None else "Unknown",
+                f"{product.group(product.lastgroup)} ({tmp[1]})" if product is not None else "Unknown",
+                f"{serial.group(serial.lastgroup)}" if serial is not None else "Unknown"
+            ]
+            result.append(group)
+    return result
+
+def get_rule_num(is_white: bool = True) -> str:
+    file_path: str = WHITELIST_PATH if is_white else BLACKLIST_PATH
+    run_result = run(f"wc -l {file_path}", stdout=PIPE, stderr=PIPE, shell=True)
     if run_result.returncode == 0:
         result = run_result.stdout.decode(ENCODING).split()[0]
         return result
-    return "None"
+    return "ERROR"
 
 def get_service_status() -> dict:
     ret_value = {"is_running": "ERROR", "start_dt": "ERROR",  "uptime": "ERROR"}
@@ -87,16 +129,9 @@ def get_service_status() -> dict:
         tmp = run_result.stdout.decode(ENCODING).split()
         ret_value["is_running"] = f"{tmp[2].strip('()')} ({tmp[1]})"
         ret_value["start_dt"] = f"{tmp[5]} {tmp[6]} {tmp[7].strip(';')}"
-        ret_value["uptime"] = f"{tmp[-3]} {tmp[-2]}"
+        ret_value["uptime"] = f"{tmp[-3]} {tmp[-2]}" if "h" in tmp[-3] else f"{tmp[-2]}"
     return ret_value
 
-
-def get_whitelist_num() -> str:
-    run_result = run(f"wc -l {WHITELIST_PATH}", stdout=PIPE, stderr=PIPE, shell=True)
-    if run_result.returncode == 0:
-        result = run_result.stdout.decode(ENCODING).split()[0]
-        return result
-    return "ERROR"
 
 class ConfigIni:
     def __init__(self):
@@ -111,6 +146,7 @@ class ConfigIni:
 
         self.__version = self.__config["Version"].get("version")
         self.__auth_str = self.__config["Management"].get("auth_str")
+        self.__blacklist = self.__config["Management"].get("blacklist")
         self.__lang = self.__config["Management"].get("lang")
         self.__log_path = self.__config["Logging"].get("path")
         self.__log_level = self.__config["Logging"].get("level")
@@ -120,6 +156,13 @@ class ConfigIni:
 
     def get_auth_str(self):
         return self.__auth_str
+
+    def get_blacklist(self):
+        try:
+            value = int(self.__blacklist)
+        except ValueError:
+            return 0
+        return value
 
     def get_lang(self):
         return self.__lang
@@ -134,6 +177,10 @@ class ConfigIni:
         self.__auth_str = enc_auth_str
         return None
 
+    def set_blacklist(self, on_off: int):
+        self.__blacklist = str(on_off)
+        return None
+
     def set_lang(self, lang: str):
         self.__lang = lang
         return None
@@ -144,6 +191,11 @@ class ConfigIni:
 
     def set_log_level(self, log_level: str):
         self.__log_level = log_level
+        return None
+
+    def write(self):
+        with open(CONFIG_PATH, "w") as f:
+            self.__config.write(f)
         return None
 
     def reject(self):

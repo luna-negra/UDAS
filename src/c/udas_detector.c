@@ -180,7 +180,7 @@ int is_udas_alert_run(USB_INFO * usb_info)
 
 void * call_gui_alert_thread(USB_INFO * usb_info)
 {
-        // search_device: if there is no search data, return NULL.
+    // search_device: if there is no search data, return NULL.
     if (search_device(usb_info) == EXIT_FAILURE) return NULL;
 
     // check duplicate execution for udas_alert

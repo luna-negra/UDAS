@@ -3,4 +3,8 @@
 !src/c/udas.*
 !src/c/udas_detector.*
 !src/python/
+!src/python/udas/
+!src/python/udas/*.py
 !src/python/*.py
+!config/
+!config/config.ini

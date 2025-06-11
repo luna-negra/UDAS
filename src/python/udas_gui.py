@@ -233,57 +233,22 @@ class MainWindow(QMainWindow):
         table_header = ["Vendor", "Product", "Serial", ]
         width = WIDGET_MAIN_CONTENT_WIDTH - LAYOUT_MAIN_CONTENT_MARGIN * 2
 
-        """
-        label_whitelist = custom_label(text="<b>WHITELIST</b>",
-                                       width=width,
-                                       height=height)
-
-        table_whitelist = custom_table(total_width=width,
-                                       total_height=table_height,
-                                       header_label=table_header,
-                                       table_data=get_rules(),
-                                       is_resize_column_to_contents=False,)
-
-        layout_button_whitelist = custom_label_button_for_control(total_width=width,
-                                                                  height=height,
-                                                                  ratio=0.7,
-                                                                  info_text="",
-                                                                  button_text="Remove Whitelist",
-                                                                  button_width=button_width,
-                                                                  button_enable=False,
-                                                                  button_style=BUTTON_GENERAL_STYLE)
-
-        label_blacklist = custom_label(text="<b>BLACKLIST</b>",
-                                       width=width,
-                                       height=height)
-
-        table_blacklist = custom_table(total_width=width,
-                                       total_height=table_height,
-                                       header_label=table_header,
-                                       table_data=get_rules(is_white=False),
-                                       is_resize_column_to_contents=False,)
-
-        layout_button_blacklist = custom_label_button_for_control(total_width=width,
-                                                                  height=height,
-                                                                  ratio=0.7,
-                                                                  info_text="",
-                                                                  button_text="Remove Blacklist",
-                                                                  button_enable=False,
-                                                                  button_width=button_width,
-                                                                  button_style=BUTTON_GENERAL_STYLE)
-
-        layout = custom_box_layout(children=[label_whitelist,
-                                             table_whitelist,
-                                             layout_button_whitelist,
-                                             custom_separate_line(color=COLOR_SEPARATE_LINE),
-                                             label_blacklist,
-                                             table_blacklist,
-                                             layout_button_blacklist,],
-                                   margin_l=LAYOUT_MAIN_CONTENT_MARGIN,
-                                   margin_t=LAYOUT_MAIN_CONTENT_MARGIN)
-
-        self.widget_main_content.setLayout(layout)
-        """
+        widget_table_button_blacklist = CustomTableWithOneButton(
+            total_width=width,
+            label_height=height,
+            label_text="<b>BLACKLIST</b>",
+            table_height=table_height,
+            table_header=table_header,
+            table_data=get_rules(is_white=False),
+            ratio=0.7,
+            align="right",
+            button_width=button_width,
+            button_height=height,
+            button_text="Remove Blacklist",
+            button_style=BUTTON_GENERAL_STYLE,
+            button_enable=False,
+            button_status_tip="Remove selected blacklist...",
+        )
 
         widget_table_button_whitelist = CustomTableWithOneButton(
             total_width=width,
@@ -306,26 +271,9 @@ class MainWindow(QMainWindow):
             margin_b=margin,
         )
 
-        widget_table_button_blacklist = CustomTableWithOneButton(
-            total_width=width,
-            label_height=height,
-            label_text="<b>BLACKLIST</b>",
-            table_height=table_height,
-            table_header=table_header,
-            table_data=get_rules(is_white=False),
-            ratio=0.7,
-            align="right",
-            button_width=button_width,
-            button_height=height,
-            button_text="Remove Blacklist",
-            button_style=BUTTON_GENERAL_STYLE,
-            button_enable=False,
-            button_status_tip="Remove selected blacklist...",
-        )
-
-        layout_test = custom_box_layout(children=[widget_table_button_whitelist,
+        layout_test = custom_box_layout(children=[widget_table_button_blacklist,
                                                   custom_separate_line(color=COLOR_SEPARATE_LINE),
-                                                  widget_table_button_blacklist],
+                                                  widget_table_button_whitelist],
                                         margin_l=20,
                                         margin_t=20,
                                         margin_r=20,

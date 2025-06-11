@@ -14,7 +14,8 @@ from .udas_pytool import (Qt,
                          QTableWidgetItem,
                          QAbstractItemView,
                          ConfigIni,
-                         sys,)
+                         exit_process,
+                         remove_registered_usb_info,)
 
 
 def custom_box_layout(children: list,
@@ -392,7 +393,7 @@ class CustomDialogPasswordInput(QDialog):
             self.label_result.setStyleSheet("color: red; font-weight:500;")
 
     def reject(self):
-        sys.exit(-1)
+        exit_process(exit_code=-1)
 
 
 class CustomTableWithOneButton(QWidget):
@@ -480,7 +481,37 @@ class CustomTableWithOneButton(QWidget):
         self.__button.setEnabled(True)
 
     def __on_click_remove_item(self):
-        selected_item = self.__table.selectedItems()
-        print(selected_item[0].text())
-        print(selected_item[1].text())
-        print(selected_item[2].text())
+        selected_item: list = self.__table.selectedItems()
+        row: int = self.__table.currentRow()
+        manufacturer, id_vendor = [ text.strip("()") for text in selected_item[0].text().split() ]
+        product, id_product = [ text.strip("()") for text in selected_item[1].text().split() ]
+        serial = selected_item[2].text()
+
+        cmd_result = remove_registered_usb_info(id_vendor=id_vendor,
+                                                id_product=id_product,
+                                                serial=serial,
+                                                manufacturer=manufacturer,
+                                                product=product,)
+        # exit_code:
+        # 0 - OK,
+        # 1 - Error with command usage,
+        # 126 - cancelled,
+        # 127 - Not exist command
+        exit_code = cmd_result.returncode
+        if exit_code == 0:
+            self.__table.removeRow(row)
+            # MessageBox
+
+        elif exit_code == 1:
+            print("[ERROR] COMMAND ERROR")
+            # MessageBox
+
+        elif exit_code == 127:
+            print("[ERROR] NO COMMAND EXIST")
+            # MessageBox
+
+        else:
+            print(exit_code)
+            print(cmd_result.stdout)
+
+        return None

@@ -53,5 +53,7 @@ if __name__ == "__main__":
         sys.exit(-1)
 
     dialog = CustomDialogPasswordInput()
+
+
     result = dialog.exec()
     sys.exit(app.quit())

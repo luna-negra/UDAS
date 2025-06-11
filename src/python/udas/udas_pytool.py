@@ -82,6 +82,9 @@ def create_menubar(p_menu, menu_structure, widget):
         p_menu.addAction(sub_action)
     return None
 
+def exit_process(exit_code: int) -> None:
+    sys.exit(exit_code)
+    return None
 
 def get_rules(is_white: bool=True) -> list:
     result = []
@@ -107,9 +110,9 @@ def get_rules(is_white: bool=True) -> list:
             serial = re.compile(SERIAL_REGEX).search(line)
 
             group: list = [
-                f"{manufacturer.group(manufacturer.lastgroup)} ({tmp[0]})" if manufacturer is not None else "Unknown",
-                f"{product.group(product.lastgroup)} ({tmp[1]})" if product is not None else "Unknown",
-                f"{serial.group(serial.lastgroup)}" if serial is not None else "Unknown"
+                f"{manufacturer.group(manufacturer.lastgroup)} ({tmp[0]})" if manufacturer is not None else f"N/A ({tmp[0]})",
+                f"{product.group(product.lastgroup)} ({tmp[1]})" if product is not None else f"N/A ({tmp[1]})",
+                f"{serial.group(serial.lastgroup)}" if serial is not None else "N/A"
             ]
             result.append(group)
     return result
@@ -131,6 +134,20 @@ def get_service_status() -> dict:
         ret_value["start_dt"] = f"{tmp[5]} {tmp[6]} {tmp[7].strip(';')}"
         ret_value["uptime"] = f"{tmp[-3]} {tmp[-2]}" if "h" in tmp[-3] else f"{tmp[-2]}"
     return ret_value
+
+def remove_registered_usb_info(id_vendor: str, id_product:str, serial:str, manufacturer:str, product:str):
+    command: str = f"pkexec ../c/udas td remove --idVendor={id_vendor} --idProduct={id_product} "
+
+    if serial != "N/A":
+        command += f"--serial={serial} "
+
+    if manufacturer != "N/A":
+        command += f"--manufacturer={manufacturer} "
+
+    if product != "N/A":
+        command += f"--product={product} "
+
+    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
 
 
 class ConfigIni:

@@ -41,6 +41,10 @@ MANUFACTURER_REGEX= r'ATTRS{manufacturer}=="(?P<manufacturer>[A-z0-9]+)"'
 PRODUCT_REGEX= r'ATTRS{product}=="(?P<product>[A-z0-9]+)"'
 
 
+def add_new_usb_device(options):
+    run(args=f"udas td add {" ".join(options)}", stdout=PIPE, stderr=PIPE, shell=True)
+    return None
+
 def centralise_fixed(obj, width: int, height: int):
     screen = QScreen.availableGeometry(QApplication.primaryScreen())
     window_x = int((screen.width() - width) / 2)
@@ -84,7 +88,6 @@ def create_menubar(p_menu, menu_structure, widget):
 
 def exit_process(exit_code: int) -> None:
     sys.exit(exit_code)
-    return None
 
 def get_rules(is_white: bool=True) -> list:
     result = []
@@ -136,7 +139,8 @@ def get_service_status() -> dict:
     return ret_value
 
 def remove_registered_usb_info(id_vendor: str, id_product:str, serial:str, manufacturer:str, product:str):
-    command: str = f"pkexec ../c/udas td remove --idVendor={id_vendor} --idProduct={id_product} "
+    # change the command path: 2025.06.11
+    command: str = f"pkexec udas td remove --idVendor={id_vendor} --idProduct={id_product} "
 
     if serial != "N/A":
         command += f"--serial={serial} "
@@ -147,8 +151,8 @@ def remove_registered_usb_info(id_vendor: str, id_product:str, serial:str, manuf
     if product != "N/A":
         command += f"--product={product} "
 
-    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
-
+    test = run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
+    return test
 
 class ConfigIni:
     def __init__(self):

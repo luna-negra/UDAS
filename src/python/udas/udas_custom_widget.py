@@ -329,7 +329,8 @@ class CustomDialogPasswordInput(QDialog):
         self.__init_ui(kwargs)
         self.__label_width: int = self.width() - 20
         self.__label_height: int = 25
-        self.__btn_width: int = int((self.width() - 50) / 2)
+        self.__layout_button_margin: int = 25
+        self.__btn_width: int = int((self.width() - self.__layout_button_margin * 2) / 2)
         self.__btn_height: int = 30
         self.__set_widget()
 
@@ -368,7 +369,9 @@ class CustomDialogPasswordInput(QDialog):
 
         layout_button = custom_box_layout(children=[btn_cancel, btn_enter],
                                           vertical=False,
-                                          stretch=False)
+                                          stretch=False,
+                                          margin_l=self.__layout_button_margin,
+                                          margin_r=self.__layout_button_margin,)
 
         layout_password = custom_box_layout(children=[label_info,
                                                       self.line_input_password,
@@ -394,7 +397,6 @@ class CustomDialogPasswordInput(QDialog):
 
     def reject(self):
         exit_process(exit_code=-1)
-
 
 class CustomTableWithOneButton(QWidget):
     def __init__(self, **kwargs):

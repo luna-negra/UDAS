@@ -1,15 +1,17 @@
 from udas.udas_pytool import (sys,
                               QApplication,
                               QMessageBox,
+                              add_new_usb_device,
                               centralise_fixed,)
 from udas.udas_custom_widget import CustomDialogPasswordInput
 
 
 def get_usb_info(options: tuple) -> dict:
     tmp: dict = {}
-    for option in options[1:]:
-        option_tmp: list = option.split("=")
-        tmp[option_tmp[0].replace("--", "")] = option_tmp[1]
+    for option in options:
+        if "--" in option and "=" in option:
+            option_tmp: list = option.split("=")
+            tmp[option_tmp[0].replace("--", "")] = option_tmp[1]
 
     tmp["info_label"] = f"""New USB storage device({tmp.get('idVendor')}:{tmp.get('idProduct')}) is being detected.\n
 * Manufacturer: {tmp.get('manufacturer')}
@@ -53,7 +55,8 @@ if __name__ == "__main__":
         sys.exit(-1)
 
     dialog = CustomDialogPasswordInput()
-
-
     result = dialog.exec()
+
+    # test: 2025.06.11
+    #add_new_usb_device(sys.argv)
     sys.exit(app.quit())

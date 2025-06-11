@@ -18,7 +18,7 @@ EXIT_FAILURE: 1
     #include <sys/wait.h>
 
     #define Q_LEN 16
-    
+
     typedef struct libusb_device_descriptor libusb_device_descriptor;
     typedef struct {
         short result;

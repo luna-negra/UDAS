@@ -97,7 +97,7 @@ int register_td(char ** rule_str, USB_DEV * usb_dev)
 		(strlen(usb_dev->serial) == 0) ? "Unknown": usb_dev->serial
 	);
 	
-	FILE * rule_file = fopen(CUSTOM_DEFAULT_RULE, "a");
+	FILE * rule_file = fopen(CUSTOM_WHITELIST_RULE, "a");
 	if (rule_file == NULL)
 	{
 		fprintf(stderr, "[ERROR] Fail to open UDAS rule file.\n");
@@ -105,9 +105,6 @@ int register_td(char ** rule_str, USB_DEV * usb_dev)
 	}
 
 	int result = fputs(*rule_str, rule_file);
-
-	printf("%s\n", *rule_str);
-	printf("%d\n", result);
 
 	if (result < 0)
 	{
@@ -132,11 +129,8 @@ int remove_td(char ** rule_str, USB_DEV * usb_dev)
 		(strlen(usb_dev->serial) == 0) ? "Unknown": usb_dev->serial
 	);
 
-	printf("\n%s\n", *rule_str);
-
-
 	char buffer[512];
-	FILE * rule_file = fopen(CUSTOM_DEFAULT_RULE, "r");
+	FILE * rule_file = fopen(CUSTOM_WHITELIST_RULE, "r");
 	
 	if (rule_file == NULL)
 	{
@@ -144,7 +138,7 @@ int remove_td(char ** rule_str, USB_DEV * usb_dev)
 		return EXIT_FAILURE;
 	}
 
-	FILE * tmp_file = fopen(CUSTOM_DEFAULT_RULE_TMP, "w");
+	FILE * tmp_file = fopen(CUSTOM_WHITELIST_RULE_TMP, "w");
 	if (rule_file == NULL)
 	{
 		fprintf(stderr, "[ERROR] Can not open tmp rule file.\n");
@@ -156,8 +150,8 @@ int remove_td(char ** rule_str, USB_DEV * usb_dev)
 		if (strcmp(buffer, *rule_str) != 0)	fputs(buffer, tmp_file);
 	}
 
-	remove(CUSTOM_DEFAULT_RULE);
-	rename(CUSTOM_DEFAULT_RULE_TMP, CUSTOM_DEFAULT_RULE);
+	remove(CUSTOM_WHITELIST_RULE);
+	rename(CUSTOM_WHITELIST_RULE_TMP, CUSTOM_WHITELIST_RULE);
 
 	fclose(rule_file);
 	fclose(tmp_file);
@@ -179,7 +173,7 @@ int search_td(char ** rule_str, USB_DEV * usb_dev)
 
 	int match_flag = -1;
 	char buffer[512];
-	FILE * rule_file = fopen(CUSTOM_DEFAULT_RULE, "r");
+	FILE * rule_file = fopen(CUSTOM_WHITELIST_RULE, "r");
 
 	if (rule_file == NULL)
 	{
@@ -204,29 +198,29 @@ int main (int argc, char * argv[])
 {
 	int not_filtered = -1;
 
-	if (argc != 8)
+	if (strncmp(argv[1], "td", 2) == 0)
 	{
-		manual();
-		return EXIT_FAILURE;
-	}
+        if (argc != 8)
+        {
+            manual();
+            return EXIT_FAILURE;
+        }
 
-	if (strcmp(argv[1], "td") == 0)
-	{
 		USB_DEV usb_dev = get_dev_info(argc, argv);
 		char * rule_str = malloc(sizeof(char) * 512); 
 		create_udev_rule(&usb_dev, &rule_str);
 		
 		if (strcmp(rule_str, DEFAULT_UDEV_RULE) != 0)
 		{
-			if ((strcmp(argv[2], "register")) == 0)
+			if ((strncmp(argv[2], "register", strlen("register"))) == 0)
 			{
 				if (register_td(&rule_str, &usb_dev) == EXIT_SUCCESS)	not_filtered = 0;
 			}
-			else if (!(strcmp(argv[2], "search")))
+			else if ((strncmp(argv[2], "search", strlen("search"))) == 0)
 			{
 				if (search_td(&rule_str, &usb_dev) == EXIT_SUCCESS) not_filtered = 0;
 			}
-			else if (!(strcmp(argv[2], "remove")))
+			else if ((strncmp(argv[2], "remove", strlen("remove"))) == 0)
 			{
 				if (remove_td(&rule_str, &usb_dev) == EXIT_SUCCESS) not_filtered =0;
 			}
@@ -235,26 +229,107 @@ int main (int argc, char * argv[])
 		free(rule_str);
 	}
 	
-	else if (strcmp(argv[1], "set") == 0)
+	else if (strncmp(argv[1], "set", 3) == 0)
 	{	
-		if (argc >= 5)
+		FILE * config_file = fopen(CONFIG_FILE_PATH, "r");
+		FILE * config_file_tmp = fopen(CONFIG_FILE_TMP_PATH, "w");
+
+		if ((config_file == NULL) || (config_file_tmp == NULL))
 		{
-			if (!(strcmp(argv[2], "loglevel")))
+			fprintf(stdout, "[ERROR] Fail to open UDAS config file.");
+			return EXIT_FAILURE;
+		}
+
+		if ((strncmp(argv[2], "loglevel", strlen("loglevel"))) == 0)
+		{
+			if (argc == 4)
 			{
-				printf("10\n");
-				return 0;
-			}
-			else if (!(strcmp(argv[2], "mount")))
-			{
-				printf("11\n");
-				return 0;
-			}
-			else if (!(strcmp(argv[2], "mod")))
-			{
-				printf("12\n");
-				return 0;
+				//Loglevel: Debug, Info, Warning, Critical
+				char * loglevel = *(argv + 3);
+
+				if ((strncmp(loglevel, "debug", 5) == 0) || (strncmp(loglevel, "info", 4) == 0)|| (strncmp(loglevel, "warning", 7) == 0) || (strncmp(loglevel, "critical", 8) == 0))
+				{
+					char buffer[256];
+					while (fgets(buffer, sizeof(buffer), config_file) != NULL)
+					{
+						if (strncmp(buffer, "level=", 6) == 0) 
+						{
+							char tmp[32];
+							sprintf(tmp, "level=%s", loglevel);
+							fputs(tmp, config_file_tmp);
+							continue;
+						}
+
+						fputs(buffer, config_file_tmp);
+					}
+
+					not_filtered = 0;
+				}
 			}
 		}
+		else if ((strncmp(argv[2], "passwd", strlen("passwd"))) == 0)
+		{
+			if (argc == 5)
+			{
+				// udas set passwd --old-password=pw --new-password=newpw
+				char * old_password = *(argv + 3);
+				char * new_password = *(argv + 4);
+				
+				char * token_old_pw = strtok(old_password, "=");
+				token_old_pw = strtok(NULL, "=");
+				sprintf(old_password, "auth_str=%s\n", token_old_pw);
+
+				char * token_new_pw = strtok(new_password, "=");
+				token_new_pw = strtok(NULL, "=");
+				sprintf(new_password, "auth_str=%s\n", token_new_pw);
+
+				char buffer[256];
+				while (fgets(buffer, sizeof(buffer), config_file) != NULL)
+				{
+					if (strncmp(buffer, old_password, strlen(old_password)) == 0)
+					{
+						fputs(new_password, config_file_tmp);
+						continue;
+					}
+					fputs(buffer, config_file_tmp);
+				}
+
+				not_filtered = 0;
+			}
+		}
+		else if ((strncmp(argv[2], "blacklist", strlen("blacklist"))) == 0)
+		{
+			if (argc == 4)
+			{
+				/* udas set blacklist on , udas set blacklist off */
+				char * blacklist = *(argv + 3);
+
+				if ((strncmp(blacklist, "on", 2) == 0) || (strncmp(blacklist, "off", 3) == 0))
+				{
+					char buffer[256];
+					while (fgets(buffer, sizeof(buffer), config_file) != NULL)
+					{
+						if (strncmp(buffer, "blacklist=", 10) == 0) 
+						{
+							char tmp[32];
+							sprintf(tmp, "blacklist=%d\n", (strncmp(blacklist, "off", 3) == 0) ? 0 : 1 );
+							fputs(tmp, config_file_tmp);
+							continue;
+						}
+
+						fputs(buffer, config_file_tmp);
+					}
+
+					not_filtered = 0;
+				}
+			}
+		}
+
+		fclose(config_file);
+		fclose(config_file_tmp);
+
+		remove(CONFIG_FILE_PATH);
+		rename(CONFIG_FILE_TMP_PATH, CONFIG_FILE_PATH);
 	}
 
 	if (not_filtered == -1) manual();

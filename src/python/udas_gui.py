@@ -388,12 +388,11 @@ if __name__ == "__main__":
     app = QApplication()
 
     # if cancelled , entire process will be terminated.
-    """
     pw_dialog = CustomDialogPasswordInput(title=DIALOG_PASSWORD_TITLE,
                                           width=DIALOG_PASSWORD_WIDTH,
                                           height=DIALOG_PASSWORD_HEIGHT)
     pw_dialog.exec()
-    """
+
     # main window.
     window = MainWindow(title="USB Docking Authentication System",
                         width=MAIN_WINDOW_WIDTH,

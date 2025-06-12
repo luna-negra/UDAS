@@ -1,6 +1,7 @@
 from udas.udas_pytool import (sys,
                               QApplication,
                               QMessageBox,
+                              exit_process,
                               add_new_usb_device,
                               centralise_fixed,)
 from udas.udas_custom_widget import CustomDialogPasswordInput
@@ -52,11 +53,10 @@ if __name__ == "__main__":
     msg_box = AlertNewUSB(sys.argv)
     msg_box_result = msg_box.exec()
     if msg_box_result != QMessageBox.Yes:
-        sys.exit(-1)
+        exit_process(-1)
 
-    dialog = CustomDialogPasswordInput()
-    result = dialog.exec()
+    # input password
+    CustomDialogPasswordInput().exec()
 
-    # test: 2025.06.11
-    #add_new_usb_device(sys.argv)
+    # terminate process
     sys.exit(app.quit())

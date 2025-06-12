@@ -66,7 +66,7 @@ USB_INFO get_usb_dev(libusb_device * device, libusb_device_descriptor * desc)
     
     fprintf(
         stdout, 
-        "[INFO] New USB Storage (%04x: %04x) is connected: Vendor - %s, Product: %s Serial: %s\n", 
+        "[INFO] USB Storage (%04x: %04x) is connected: Vendor - %s, Product: %s Serial: %s\n",
         usb_info.manufacture_id, usb_info.product_id, usb_info.manufacture, usb_info.product, usb_info.serialnum
     );
 
@@ -84,7 +84,7 @@ int register_device(USB_INFO * usb_info)
     // create command to register new usb storage device to udev rule file
     if (snprintf(command,
             sizeof(command),
-            "./udas td register --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s",
+            "udas td register --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s",
             usb_info->manufacture_id,
             usb_info->product_id,
             usb_info->serialnum,
@@ -115,7 +115,7 @@ int search_device(USB_INFO * usb_info)
     // create command to register new usb storage device to udev rule file
     if (snprintf(command, 
             sizeof(command), 
-            "./udas td search --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s", 
+            "udas td search --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s",
             usb_info->manufacture_id,
             usb_info->product_id,
             usb_info->serialnum,
@@ -210,7 +210,7 @@ void * call_gui_alert_thread(USB_INFO * usb_info)
         snprintf(serial, sizeof(serial), "--serial=%s", usb_info->serialnum);
         snprintf(manufacturer, sizeof(manufacturer), "--manufacturer=%s", usb_info->manufacture);
         snprintf(product, sizeof(product), "--product=%s", usb_info->product);
-        execl(UDAS_ALERT_PATH, UDAS_ALERT_PATH, idVendor, idProduct, serial, manufacturer, product, NULL);
+        execlp("udas_alert", "udas_alert", idVendor, idProduct, serial, manufacturer, product, NULL);
         
         // exit child process with error code.
         exit(-2);
@@ -232,6 +232,7 @@ void * call_gui_alert_thread(USB_INFO * usb_info)
                 fprintf(stdout, "[INFO] Success to register new USB storage as a trusted device.\n"):
                 fprintf(stderr, "[ERROR] Fail to register new USB storage as a trusted device.\n");
             }
+            else if (exit_code == 253) fprintf(stderr, "[ERROR] Config file is not exist.\n");
             else if (exit_code == 254) fprintf(stderr, "[ERROR] Can not find the udas_alert.\n");
             else fprintf(stderr, "[INFO] New USB storage is not registered as a trusted device.\n") ;
         }

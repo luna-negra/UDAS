@@ -45,7 +45,7 @@ USB_DEV get_dev_info(int argc, char * argv[])
 		}
 	}
 
-	fprintf(stdout, "[INFO] Successfully parsing newly connected USB storage information.\n");
+	fprintf(stdout, "[INFO] Successfully parsing USB storage information.\n");
 	return usb_dev;
 }
 
@@ -105,6 +105,10 @@ int register_td(char ** rule_str, USB_DEV * usb_dev)
 	}
 
 	int result = fputs(*rule_str, rule_file);
+
+	printf("%s\n", *rule_str);
+	printf("%d\n", result);
+
 	if (result < 0)
 	{
 		fprintf(stderr, "[ERROR] Fail to register trusted device for new USB storage\n");
@@ -127,6 +131,9 @@ int remove_td(char ** rule_str, USB_DEV * usb_dev)
 		usb_dev->product,
 		(strlen(usb_dev->serial) == 0) ? "Unknown": usb_dev->serial
 	);
+
+	printf("\n%s\n", *rule_str);
+
 
 	char buffer[512];
 	FILE * rule_file = fopen(CUSTOM_DEFAULT_RULE, "r");
@@ -154,6 +161,7 @@ int remove_td(char ** rule_str, USB_DEV * usb_dev)
 
 	fclose(rule_file);
 	fclose(tmp_file);
+
 	return EXIT_SUCCESS;
 }
 

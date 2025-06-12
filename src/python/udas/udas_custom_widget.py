@@ -2,6 +2,7 @@ from typing import Any
 from .udas_pytool import (Qt,
                          QWidget,
                          QDialog,
+                         QMessageBox,
                          QSplitter,
                          QVBoxLayout,
                          QHBoxLayout,
@@ -326,13 +327,25 @@ def custom_label_combobox_for_control(total_width: int,
 class CustomDialogPasswordInput(QDialog):
     def __init__(self, **kwargs):
         super().__init__()
-        self.__init_ui(kwargs)
-        self.__label_width: int = self.width() - 20
-        self.__label_height: int = 25
-        self.__layout_button_margin: int = 25
-        self.__btn_width: int = int((self.width() - self.__layout_button_margin * 2) / 2)
-        self.__btn_height: int = 30
-        self.__set_widget()
+
+        try:
+            self.__auth_str = ConfigIni().get_auth_str()
+
+        except AttributeError:
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Critical)
+            msg_box.setText("UDAS config file is not found.")
+            msg_box.exec()
+            self.reject(-3)
+
+        else:
+            self.__init_ui(kwargs)
+            self.__label_width: int = self.width() - 20
+            self.__label_height: int = 25
+            self.__layout_button_margin: int = 25
+            self.__btn_width: int = int((self.width() - self.__layout_button_margin * 2) / 2)
+            self.__btn_height: int = 30
+            self.__set_widget()
 
     def __init_ui(self, kwargs):
         self.setWindowTitle(kwargs.get("title") or "UDAS Authentication")
@@ -366,7 +379,6 @@ class CustomDialogPasswordInput(QDialog):
         btn_cancel.clicked.connect(lambda: self.reject())
         btn_enter.clicked.connect(self.__accept)
 
-
         layout_button = custom_box_layout(children=[btn_cancel, btn_enter],
                                           vertical=False,
                                           stretch=False,
@@ -389,14 +401,14 @@ class CustomDialogPasswordInput(QDialog):
         # 2025.06.07: require encryption.
         input_password = self.line_input_password.text()
 
-        if input_password == ConfigIni().get_auth_str():
+        if input_password == self.__auth_str:
             self.accept()
         else:
             self.label_result.setText("Not Authorized")
             self.label_result.setStyleSheet("color: red; font-weight:500;")
 
-    def reject(self):
-        exit_process(exit_code=-1)
+    def reject(self, exit_code: int=-1):
+        exit_process(exit_code)
 
 class CustomTableWithOneButton(QWidget):
     def __init__(self, **kwargs):
@@ -506,6 +518,7 @@ class CustomTableWithOneButton(QWidget):
 
         elif exit_code == 1:
             print("[ERROR] COMMAND ERROR")
+            print(exit_code)
             # MessageBox
 
         elif exit_code == 127:

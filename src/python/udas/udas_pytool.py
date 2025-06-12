@@ -33,7 +33,7 @@ from PySide6.QtWidgets import (QApplication,
 # need to convert absolute
 BLACKLIST_PATH: str = "/etc/udev/rules.d/99-udas.blacklist.rules"
 ENCODING: str ="utf-8"
-CONFIG_PATH: str = "../../config/config.ini"
+CONFIG_PATH: str = "/etc/udas/config/config.ini"
 WHITELIST_PATH: str = "/etc/udev/rules.d/99-udas.custom.rules"
 RULE_REGEX = r'ACTION=="add", SUBSYSTEM=="block", ATTRS{idVendor}=="(?P<id_vendor>[A-z0-9]{4})", ATTRS{idProduct}=="(?P<id_product>[A-z0-9]{4})",.+, ENV{UDISKS_IGNORE}="(?P<ignore>[01])"'
 SERIAL_REGEX = r'ATTRS{serial}=="(?P<serial>[A-z0-9]+)"'
@@ -86,7 +86,7 @@ def create_menubar(p_menu, menu_structure, widget):
         p_menu.addAction(sub_action)
     return None
 
-def exit_process(exit_code: int) -> None:
+def exit_process(exit_code: int=0) -> None:
     sys.exit(exit_code)
 
 def get_rules(is_white: bool=True) -> list:
@@ -139,20 +139,18 @@ def get_service_status() -> dict:
     return ret_value
 
 def remove_registered_usb_info(id_vendor: str, id_product:str, serial:str, manufacturer:str, product:str):
+
+    id_vendor = id_vendor if id_vendor != "N/A" else "Unknown"
+    id_product = id_product if id_product != "N/A" else "Unknown"
+    serial = serial if serial != "N/A" else "Unknown"
+    manufacturer = manufacturer if manufacturer != "N/A" else "Unknown"
+    product = product if product != "N/A" else "Unknown"
+
     # change the command path: 2025.06.11
-    command: str = f"pkexec udas td remove --idVendor={id_vendor} --idProduct={id_product} "
-
-    if serial != "N/A":
-        command += f"--serial={serial} "
-
-    if manufacturer != "N/A":
-        command += f"--manufacturer={manufacturer} "
-
-    if product != "N/A":
-        command += f"--product={product} "
-
+    command: str = f"pkexec udas td remove --idVendor={id_vendor} --idProduct={id_product} --serial={serial} --manufacturer={manufacturer} --product={product}"
     test = run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
     return test
+
 
 class ConfigIni:
     def __init__(self):
@@ -161,16 +159,17 @@ class ConfigIni:
 
         try:
             if len(self.__config.sections()) != 3:
-                raise FileExistsError("[ERROR] Config file is not a proper.")
-        except FileExistsError:
-            self.reject()
+                raise AttributeError("[ERROR] Config file is not a proper.")
+        except AttributeError as e:
+            pass
 
-        self.__version = self.__config["Version"].get("version")
-        self.__auth_str = self.__config["Management"].get("auth_str")
-        self.__blacklist = self.__config["Management"].get("blacklist")
-        self.__lang = self.__config["Management"].get("lang")
-        self.__log_path = self.__config["Logging"].get("path")
-        self.__log_level = self.__config["Logging"].get("level")
+        else:
+            self.__version = self.__config["Version"].get("version")
+            self.__auth_str = self.__config["Management"].get("auth_str")
+            self.__blacklist = self.__config["Management"].get("blacklist")
+            self.__lang = self.__config["Management"].get("lang")
+            self.__log_path = self.__config["Logging"].get("path")
+            self.__log_level = self.__config["Logging"].get("level")
 
     def get_version(self):
         return self.__version

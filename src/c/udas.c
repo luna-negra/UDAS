@@ -209,7 +209,7 @@ int search_td(char ** rule_str, USB_DEV * usb_dev)
 	{
 		if (strncmp(buffer, *rule_str, strlen(*rule_str)) == 0)
 		{
-			match_flag == -1;
+			match_flag = -1;
 			break;
 		}
 	}

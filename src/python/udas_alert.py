@@ -2,7 +2,6 @@ from udas.udas_pytool import (sys,
                               QApplication,
                               QMessageBox,
                               exit_process,
-                              add_new_usb_device,
                               centralise_fixed,)
 from udas.udas_custom_widget import CustomDialogPasswordInput
 

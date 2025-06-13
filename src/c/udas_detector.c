@@ -169,14 +169,14 @@ int search_device(USB_INFO * usb_info)
 
     // close pipe and remove file pointre.
     pclose(cmd);
-
+    
     if (cmd_result == 0)
     {
         fprintf(stdout, "[INFO] Not a registered USB storage\n");
         return EXIT_SUCCESS;
     }
-    
-    fprintf(stdout, "[INFO] Already registered USB storage\n");
+    else if (cmd_result != 1) fprintf(stdout, "[INFO] Already registered USB storage as whitelist.\n");
+    else if (cmd_result != -1) fprintf(stdout, "[INFO] Already registered USB storage as blacklist.\n");
     return EXIT_FAILURE;
 }
 
@@ -216,7 +216,7 @@ void * call_gui_alert_thread(USB_INFO * usb_info)
     // check duplicate execution for udas_alert
     if (is_udas_alert_run(usb_info) != EXIT_SUCCESS)
     {
-        printf("[WARNING] Process for the same USB storage is already Running.\n");
+        fprintf(stdout, "[WARNING] Process for the same USB storage is already Running.\n");
         return NULL;
     }
 

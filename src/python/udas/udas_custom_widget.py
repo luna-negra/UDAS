@@ -452,7 +452,7 @@ class CustomTableWithOneButton(QWidget):
                              height=self.__label_height,
                              style=self.__label_style)
 
-        self.__table = custom_table(total_width=self.__total_width,
+        self.table = custom_table(total_width=self.__total_width,
                                     total_height=self.__table_height,
                                     header_label=self.__table_header,
                                     table_data=self.__table_data,
@@ -465,7 +465,7 @@ class CustomTableWithOneButton(QWidget):
                                     is_resize_row_to_contents=self.__is_resize_row_to_contents,
                                     is_resize_column_to_contents=self.__is_resize_column_to_contents)
 
-        self.__table.itemClicked.connect(lambda: self.__on_click_table_item())
+        self.table.itemClicked.connect(lambda: self.__on_click_table_item())
 
         self.__button = custom_push_button(text=self.__button_text,
                                            width=self.__button_width,
@@ -476,7 +476,7 @@ class CustomTableWithOneButton(QWidget):
                                            default=self.__button_default,
                                            status_tip=self.__button_status_tip)
 
-        self.__button.clicked.connect(lambda: self.__on_click_remove_item())
+        self.__button.clicked.connect(lambda: self.__button_connect)
 
         blank_label = custom_label(text="",
                                    width=int(self.__total_width * self.__ratio),
@@ -487,46 +487,9 @@ class CustomTableWithOneButton(QWidget):
                                           stretch=self.__button_stretch,
                                           align=self.__button_align,)
 
-        layout = custom_box_layout(children=[label, self.__table, layout_button],)
+        layout = custom_box_layout(children=[label, self.table, layout_button],)
         self.setLayout(layout)
         return None
 
     def __on_click_table_item(self):
         self.__button.setEnabled(True)
-
-    def __on_click_remove_item(self):
-        selected_item: list = self.__table.selectedItems()
-        row: int = self.__table.currentRow()
-        manufacturer, id_vendor = [ text.strip("()") for text in selected_item[0].text().split() ]
-        product, id_product = [ text.strip("()") for text in selected_item[1].text().split() ]
-        serial = selected_item[2].text()
-
-        cmd_result = remove_registered_usb_info(id_vendor=id_vendor,
-                                                id_product=id_product,
-                                                serial=serial,
-                                                manufacturer=manufacturer,
-                                                product=product,)
-        # exit_code:
-        # 0 - OK,
-        # 1 - Error with command usage,
-        # 126 - cancelled,
-        # 127 - Not exist command
-        exit_code = cmd_result.returncode
-        if exit_code == 0:
-            self.__table.removeRow(row)
-            # MessageBox
-
-        elif exit_code == 1:
-            print("[ERROR] COMMAND ERROR")
-            print(exit_code)
-            # MessageBox
-
-        elif exit_code == 127:
-            print("[ERROR] NO COMMAND EXIST")
-            # MessageBox
-
-        else:
-            print(exit_code)
-            print(cmd_result.stdout)
-
-        return None

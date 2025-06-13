@@ -41,10 +41,6 @@ MANUFACTURER_REGEX= r'ATTRS{manufacturer}=="(?P<manufacturer>[A-z0-9]+)"'
 PRODUCT_REGEX= r'ATTRS{product}=="(?P<product>[A-z0-9]+)"'
 
 
-def add_new_usb_device(options):
-    run(args=f"udas td add {" ".join(options)}", stdout=PIPE, stderr=PIPE, shell=True)
-    return None
-
 def centralise_fixed(obj, width: int, height: int):
     screen = QScreen.availableGeometry(QApplication.primaryScreen())
     window_x = int((screen.width() - width) / 2)
@@ -138,16 +134,17 @@ def get_service_status() -> dict:
         ret_value["uptime"] = f"{tmp[-3]} {tmp[-2]}" if "h" in tmp[-3] else f"{tmp[-2]}"
     return ret_value
 
-def remove_registered_usb_info(id_vendor: str, id_product:str, serial:str, manufacturer:str, product:str):
+def remove_registered_usb_info(id_vendor: str, id_product:str, serial:str, manufacturer:str, product:str, blacklist:bool=False):
 
     id_vendor = id_vendor if id_vendor != "N/A" else "Unknown"
     id_product = id_product if id_product != "N/A" else "Unknown"
     serial = serial if serial != "N/A" else "Unknown"
     manufacturer = manufacturer if manufacturer != "N/A" else "Unknown"
     product = product if product != "N/A" else "Unknown"
+    blacklist = "blacklist" if blacklist else "whitelist"
 
     # change the command path: 2025.06.11
-    command: str = f"pkexec udas td remove --idVendor={id_vendor} --idProduct={id_product} --serial={serial} --manufacturer={manufacturer} --product={product}"
+    command: str = f"pkexec udas td remove {blacklist} --idVendor={id_vendor} --idProduct={id_product} --serial={serial} --manufacturer={manufacturer} --product={product}"
     test = run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
     return test
 

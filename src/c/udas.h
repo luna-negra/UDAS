@@ -14,7 +14,6 @@
         char idProduct[8];
     } USB_DEV;
 
-    #define CONFIG_FILE_PATH "/etc/udas/config/config.ini"
     #define CONFIG_FILE_TMP_PATH "/etc/udas/config/config.ini_tmp"
     #define CUSTOM_BLACKLIST_RULE "/etc/udev/rules.d/99-udas.blacklist.rules"
     #define CUSTOM_BLACKLIST_RULE_TMP "/etc/udev/rules.d/99-udas.blacklist.rules_tmp"

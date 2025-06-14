@@ -2,6 +2,7 @@ from udas.udas_pytool import (QMainWindow,
                               QApplication,
                               ConfigIni,
                               centralise_fixed,
+                              change_blacklist,
                               change_loglevel,
                               clear_layout,
                               create_menubar,
@@ -12,6 +13,7 @@ from udas.udas_pytool import (QMainWindow,
                               sys,)
 from udas.udas_custom_widget import (CustomComboboxWithButton,
                                      CustomDialogPasswordInput,
+                                     CustomLabelWithButton,
                                      CustomTableWithOneButton,
                                      custom_box_layout,
                                      custom_push_button,
@@ -61,6 +63,12 @@ class MainWindow(QMainWindow):
 
         # display main screen.
         self.__main()
+
+    def __change_blacklist_setting(self, current_value:int):
+        cmd_result = change_blacklist(opt="off" if current_value == 1 else "on")
+        if cmd_result.returncode == 0:
+            self.__settings()
+        return None
 
     def __change_loglevel(self, combobox, item_list: list):
         cmd_result = change_loglevel(item_list[combobox.currentIndex()].lower())
@@ -166,8 +174,8 @@ class MainWindow(QMainWindow):
         service_data: dict = self.__read_service_kpi_data()
 
         # set the size of widgets
-        total_width_half: int = int(WIDGET_MAIN_CONTENT_WIDTH / 2)
-        key_width: float = 0.4
+        key_width: float = 0.5
+        total_width_half: int = int(WIDGET_MAIN_CONTENT_WIDTH * key_width)
         height: int = 30
 
         # status widgets and layout
@@ -355,32 +363,33 @@ class MainWindow(QMainWindow):
                                                width=total_width,
                                                height=30)
 
-        widget_layout_ctrl_service = custom_label_button_for_control(total_width=total_width,
-                                                                     height=height,
-                                                                     ratio=0.7,
-                                                                     info_text="UDAS Service [On / Off]",
-                                                                     button_width=button_width,
-                                                                     button_text="OFF" if "running" in service_data.get("is_running") else "ON",
-                                                                     button_style=BUTTON_GENERAL_STYLE,
-                                                                     status_tip="Run or Stop UDAS Detecting Service...")
+        widget_layout_ctrl_service = CustomLabelWithButton(total_width=total_width,
+                                                           height=height,
+                                                           ratio=0.7,
+                                                           label_text="UDAS Service [On / Off]",
+                                                           button_width=button_width,
+                                                           button_text="OFF" if "running" in service_data.get("is_running") else "On",
+                                                           button_style=BUTTON_GENERAL_STYLE,
+                                                           button_status_tip="Run or Stop UDAS Detecting Service...")
 
-        widget_layout_ctrl_blacklist = custom_label_button_for_control(total_width=total_width,
-                                                                       height=height,
-                                                                       ratio=0.7,
-                                                                       info_text="Apply Blacklist [On / Off]",
-                                                                       button_width=button_width,
-                                                                       button_text="OFF" if config.get_blacklist() else "ON",
-                                                                       button_style=BUTTON_GENERAL_STYLE,
-                                                                       status_tip="Edit blacklist setting...")
+        widget_layout_ctrl_blacklist = CustomLabelWithButton(total_width=total_width,
+                                                            height=height,
+                                                            ratio=0.7,
+                                                            label_text="Apply Blacklist Policy [On / Off]",
+                                                            button_width=button_width,
+                                                            button_text="OFF" if config.get_blacklist() else "On",
+                                                            button_style=BUTTON_GENERAL_STYLE,
+                                                            button_status_tip="Edit blacklist setting...",
+                                                            connect=lambda: self.__change_blacklist_setting(current_value=config.get_blacklist()))
 
-        widget_layout_ctrl_password = custom_label_button_for_control(total_width=total_width,
-                                                                      height=height,
-                                                                      ratio=0.7,
-                                                                      info_text="Change UDAS Password",
-                                                                      button_width=button_width,
-                                                                      button_text="Change",
-                                                                      button_style=BUTTON_GENERAL_STYLE,
-                                                                      status_tip="Change UDAS Password...")
+        widget_layout_ctrl_password = CustomLabelWithButton(total_width=total_width,
+                                                            height=height,
+                                                            ratio=0.7,
+                                                            label_text="Change UDAS Password",
+                                                            button_width=button_width,
+                                                            button_text="Change",
+                                                            button_style=BUTTON_GENERAL_STYLE,
+                                                            button_status_tip="Change UDAS Password...")
 
         label_logging_preamble = custom_label(text="<b>Logging</b>", width=total_width, height=30)
 

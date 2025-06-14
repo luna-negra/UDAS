@@ -290,65 +290,13 @@ def custom_label_button_for_control(total_width: int,
     return widget
 
 
-
-
-
-def custom_label_combobox_for_control(total_width: int,
-                                      height: int,
-                                      ratio: float,
-                                      info_text: str,
-                                      combobox_width: int,
-                                      combobox_items: list,
-                                      button_width: int,
-                                      button_text: str,
-                                      default_item: str,
-                                      style: str | None = None,
-                                      info_style: str | None = None,
-                                      combobox_style: str | None = None,
-                                      button_style: str | None = None,
-                                      button_connect: Any  = None,
-                                      status_tip: str | None = None,
-                                      align: str = "center",
-                                      spacing: int = 10,) -> QWidget:
-
-    label_info = custom_label(text=info_text,
-                              width=int(total_width * ratio),
-                              height=height,
-                              style=info_style,)
-    combobox = custom_combobox(width=combobox_width,
-                               height=height,
-                               style=combobox_style,
-                               items_list=combobox_items,
-                               default_item=default_item,
-                               status_tip=status_tip,)
-    button = custom_push_button(width=button_width,
-                                height=height,
-                                text=button_text,
-                                style=button_style,
-                                enable=False,
-                                connect=button_connect)
-
-    # set the connection with slot.
-    combobox.currentIndexChanged.connect(lambda: button.setEnabled(True))
-    button.clicked.connect(button_connect)
-
-    layout = custom_box_layout(children=[label_info, combobox, button],
-                               vertical=False,
-                               align=align,
-                               spacing=spacing)
-
-    widget = custom_widget_for_layout(width=total_width, height=height, style=style)
-    widget.setLayout(layout)
-    return widget
-
-
 class CustomComboboxWithButton(QWidget):
     def __init__(self, **kwargs):
         super().__init__()
 
         self.__total_width: int = kwargs.get("total_width")
         self.__total_height: int = kwargs.get("total_height")
-        self.__ratio: float = kwargs.get("ratio")
+        self.__ratio: float = kwargs.get("ratio", 0.4)
 
         self.__label_text: str = kwargs.get("label_text")
         self.__label_style: str | None = kwargs.get("label_style", None)
@@ -368,6 +316,8 @@ class CustomComboboxWithButton(QWidget):
         self.__init_ui()
 
     def __init_ui(self):
+        self.setFixedSize(self.__total_width, self.__total_height)
+
         label = custom_label(text=self.__label_text,
                              width=int(self.__total_width * self.__ratio),
                              height=self.__total_height,
@@ -487,6 +437,49 @@ class CustomDialogPasswordInput(QDialog):
         exit_process(exit_code)
 
 
+class CustomLabelWithButton(QWidget):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.__total_width: int = kwargs.get("total_width")
+        self.__total_height: int = kwargs.get("height")
+        self.__ratio: float = kwargs.get("ratio", 0.5)
+
+        self.__label_width: int = int(self.__total_width * self.__ratio)
+        self.__label_text: str = kwargs.get("label_text")
+        self.__label_style: str | None = kwargs.get("label_style", None)
+
+        self.__button_width: int = kwargs.get("button_width")
+        self.__button_text: str = kwargs.get("button_text")
+        self.__button_style: str | None = kwargs.get("button_style", None)
+        self.__button_status_tip: str = kwargs.get("button_status_tip", "")
+        self.__button_default: bool = kwargs.get("button_default", False)
+        self.__button_enable: bool = kwargs.get("button_enable", True)
+        self.__button_connect: Any = kwargs.get("connect", None)
+
+        self.__init_ui()
+
+    def __init_ui(self):
+        self.setFixedSize(self.__total_width, self.__total_height)
+
+        label = custom_label(text=self.__label_text,
+                             width=self.__label_width,
+                             height=self.__total_height,
+                             style=self.__label_style)
+
+        button = custom_push_button(text=self.__button_text,
+                                         width=self.__button_width,
+                                         height = self.__total_height,
+                                         style=self.__button_style,
+                                         default=self.__button_default,
+                                         status_tip=self.__button_status_tip,
+                                         enable=self.__button_enable,
+                                         connect=self.__button_connect,)
+
+        layout = custom_box_layout(children=[label, button], vertical=False)
+        self.setLayout(layout)
+        return None
+
+
 class CustomTableWithOneButton(QWidget):
     def __init__(self, **kwargs):
         super().__init__()
@@ -524,6 +517,8 @@ class CustomTableWithOneButton(QWidget):
         self.__init_ui()
 
     def __init_ui(self):
+        self.setFixedWidth(self.__total_width,)
+
         label = custom_label(text=self.__label_text,
                              width=self.__total_width,
                              height=self.__label_height,

@@ -50,6 +50,10 @@ def centralise_fixed(obj, width: int, height: int):
     obj.setFixedSize(width, height)
     return None
 
+def change_blacklist(opt: str) -> subprocess.CompletedProcess:
+    command: str = f"pkexec udas set blacklist {opt}"
+    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
+
 def change_loglevel(log_level:str) -> subprocess.CompletedProcess:
     command: str = f"pkexec udas set loglevel {log_level}"
     return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)

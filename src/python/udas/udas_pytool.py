@@ -2,6 +2,7 @@ import subprocess
 import sys
 import configparser
 import re
+from hashlib import sha512
 from subprocess import (run,
                         PIPE,)
 from PySide6.QtCore import Qt
@@ -58,6 +59,10 @@ def change_loglevel(log_level:str) -> subprocess.CompletedProcess:
     command: str = f"pkexec udas set loglevel {log_level}"
     return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
 
+def change_password(old_pw: str, new_pw:str) -> subprocess.CompletedProcess:
+    command: str = f"pkexec udas set passwd --old-password={old_pw} --new-password={new_pw}"
+    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
+
 def clear_layout(widget):
     old_layout = widget.layout()
     if old_layout:
@@ -90,6 +95,9 @@ def create_menubar(p_menu, menu_structure, widget):
         sub_action.setStatusTip(action.get("status"))
         p_menu.addAction(sub_action)
     return None
+
+def encrypt_str(string:str) -> str:
+    return sha512(string=f"udas::{string}::2abu".encode("utf-8")).hexdigest()
 
 def exit_process(exit_code: int=0) -> None:
     sys.exit(exit_code)

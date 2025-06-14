@@ -374,10 +374,17 @@ int main (int argc, char * argv[])
 		fclose(config_file);
 		fclose(config_file_tmp);
 
-		remove(CONFIG_FILE_PATH);
-		rename(CONFIG_FILE_TMP_PATH, CONFIG_FILE_PATH);
+        if (not_filtered == 0)
+        {
+            remove(CONFIG_FILE_PATH);
+            rename(CONFIG_FILE_TMP_PATH, CONFIG_FILE_PATH);
+        }
 	}
 
-	if (not_filtered == -1) manual();
+	if (not_filtered == -1)
+	{
+	    manual();
+	    return EXIT_FAILURE;
+	}
 	return EXIT_SUCCESS;
 }

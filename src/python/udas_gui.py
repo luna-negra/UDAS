@@ -12,6 +12,7 @@ from udas.udas_pytool import (QMainWindow,
                               remove_registered_usb_info,
                               sys,)
 from udas.udas_custom_widget import (CustomComboboxWithButton,
+                                     CustomDialogPasswordChange,
                                      CustomDialogPasswordInput,
                                      CustomLabelWithButton,
                                      CustomTableWithOneButton,
@@ -19,7 +20,6 @@ from udas.udas_custom_widget import (CustomComboboxWithButton,
                                      custom_push_button,
                                      custom_label,
                                      custom_labels_kv,
-                                     custom_label_button_for_control,
                                      custom_separate_line,
                                      custom_splitter_fixed,
                                      custom_widget_for_layout,)
@@ -29,6 +29,8 @@ COLOR_SEPARATE_LINE: str = "#333"
 DIALOG_PASSWORD_TITLE: str = "UDAS Authentication"
 DIALOG_PASSWORD_WIDTH: int = 400
 DIALOG_PASSWORD_HEIGHT: int = 200
+DIALOG_PASSWORD_CHANGE_WIDTH: int = 500
+DIALOG_PASSWORD_CHANGE_HEIGHT: int = 200
 MAIN_WINDOW_TITLE: str = "USB Docking Authentication System"
 MAIN_WINDOW_WIDTH: int = 600
 MAIN_WINDOW_HEIGHT: int = 450
@@ -75,6 +77,22 @@ class MainWindow(QMainWindow):
         if cmd_result.returncode == 0:
             self.__settings()
         return None
+
+    def __change_password(self):
+        # set size
+        button_width: int = 200
+        height: int = 30;
+        line_edit_width: int = 220
+
+        dialog = CustomDialogPasswordChange(title="Change UDAS Password",
+                                            total_width=DIALOG_PASSWORD_CHANGE_WIDTH,
+                                            total_height=DIALOG_PASSWORD_CHANGE_HEIGHT,
+                                            ratio=0.4,
+                                            label_text="Change the UDAS Password.",
+                                            label_width=line_edit_width,
+                                            label_height=height,
+                                            button_width=button_width,)
+        dialog.exec()
 
     def __create_menubar(self):
         # define menubar structure
@@ -389,7 +407,8 @@ class MainWindow(QMainWindow):
                                                             button_width=button_width,
                                                             button_text="Change",
                                                             button_style=BUTTON_GENERAL_STYLE,
-                                                            button_status_tip="Change UDAS Password...")
+                                                            button_status_tip="Change UDAS Password...",
+                                                            connect=lambda: self.__change_password())
 
         label_logging_preamble = custom_label(text="<b>Logging</b>", width=total_width, height=30)
 
@@ -443,12 +462,10 @@ if __name__ == "__main__":
     app = QApplication()
 
     # if cancelled , entire process will be terminated.
-    """
     pw_dialog = CustomDialogPasswordInput(title=DIALOG_PASSWORD_TITLE,
                                           width=DIALOG_PASSWORD_WIDTH,
                                           height=DIALOG_PASSWORD_HEIGHT)
     pw_dialog.exec()
-    """
 
     # main window.
     window = MainWindow(title="USB Docking Authentication System",

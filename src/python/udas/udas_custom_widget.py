@@ -15,6 +15,8 @@ from .udas_pytool import (Qt,
                          QTableWidgetItem,
                          QAbstractItemView,
                          ConfigIni,
+                         change_password,
+                         encrypt_str,
                          exit_process,)
 
 
@@ -110,7 +112,7 @@ def custom_push_button(text: str,
                        style: str | None = None,
                        connect: Any = None,
                        status_tip: str | None = None,
-                       default: bool = False,
+                       default: bool | None = None,
                        enable: bool = True,) -> QPushButton:
     b = QPushButton(text)
     b.setFixedSize(width, height)
@@ -118,7 +120,8 @@ def custom_push_button(text: str,
     if connect is not None:
         b.clicked.connect(connect)
     b.setStatusTip(status_tip)
-    b.setDefault(default)
+    if default is not None:
+        b.setDefault(default)
     b.setEnabled(enable)
     return b
 
@@ -350,6 +353,144 @@ class CustomComboboxWithButton(QWidget):
         return None
 
 
+class CustomDialogPasswordChange(QDialog):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.__margin: int = 20
+        self.__title: str = kwargs.get("title")
+        self.__total_width: int = kwargs.get("total_width") - self.__margin * 2
+        self.__total_height: int = kwargs.get("total_height")
+        self.__ratio: float = kwargs.get("ratio")
+        self.__style: str = kwargs.get("style", "")
+
+
+        self.__label_text: str = kwargs.get("label_text")
+        self.__label_width: int = kwargs.get("label_width")
+        self.__label_height: int = kwargs.get("label_height")
+        self.__label_style: str = kwargs.get("label_style", "")
+
+        self.__line_input_style: str = kwargs.get("line_input_style", "")
+
+        self.__button_width: int = kwargs.get("button_width")
+        self.__button_style: str = kwargs.get("button_style", "")
+        self.__init_ui()
+
+    def __init_ui(self):
+        # set size
+        label_width: int = int(self.__total_width * self.__ratio)
+        self.setWindowTitle(self.__title)
+        self.setFixedSize(self.__total_width, self.__total_height)
+
+        # set buttons
+        button_enter = custom_push_button(text="Change",
+                                          width=self.__button_width,
+                                          height=self.__label_height,
+                                          default=True)
+
+        button_enter.clicked.connect(self.__accept)
+
+        layout_buttons = custom_box_layout(children=[button_enter],
+                                           vertical=False,
+                                           stretch=True,
+                                           align="center",
+                                           margin_l=125)
+
+        # set layout for old password
+        label_old_pw = custom_label(text="・Current Password",
+                                    width=label_width,
+                                    height=self.__label_height,
+                                    style=self.__label_style)
+
+        self.__line_input_old_pw = custom_line_edit(width=self.__label_width,
+                                                  height=self.__label_height,
+                                                  style=self.__line_input_style,
+                                                  tooltip="UDAS Current Password",
+                                                  status_tip="Input Current UDAS Password...",
+                                                  echo_mode=True)
+        layout_old_pw = custom_box_layout(children=[label_old_pw, self.__line_input_old_pw],
+                                          vertical=False)
+
+
+        # set layout for new password
+        label_new_pw = custom_label(text="・New Password",
+                                    width=label_width,
+                                    height=self.__label_height,
+                                    style=self.__label_style)
+        self.__line_input_new_pw = custom_line_edit(width=self.__label_width,
+                                                  height=self.__label_height,
+                                                  style=self.__line_input_style,
+                                                  tooltip="New UDAS Password",
+                                                  status_tip="Input New UDAS Password...",
+                                                  echo_mode=True,)
+        layout_new_pw = custom_box_layout(children=[label_new_pw, self.__line_input_new_pw],
+                                          vertical=False)
+
+        # set layout for new password retype
+        label_new_repw = custom_label(text="・New Password Retype",
+                                    width=label_width,
+                                    height=self.__label_height,
+                                    style=self.__label_style)
+        self.__line_input_new_repw = custom_line_edit(width=self.__label_width,
+                                                    height=self.__label_height,
+                                                    style=self.__line_input_style,
+                                                    tooltip="Retype New UDAS Password",
+                                                    status_tip="Retype New UDAS Password...",
+                                                    echo_mode=True)
+        layout_new_repw = custom_box_layout(children=[label_new_repw, self.__line_input_new_repw],
+                                            vertical=False)
+
+        # set info label
+        self.__label_info = custom_label(text="",
+                                  width=self.__total_width,
+                                  height=self.__label_height,
+                                  style=self.__label_style)
+
+        # set layout and apply to dialog
+        widget_layout_buttons = custom_widget_for_layout(width=self.__total_width, height=self.__label_height,)
+        widget_layout_buttons.setLayout(layout_buttons)
+        layout = custom_box_layout(children=[layout_old_pw,
+                                             layout_new_pw,
+                                             layout_new_repw,
+                                             self.__label_info,
+                                             widget_layout_buttons],
+                                   margin_l=self.__margin,
+                                   margin_t=self.__margin,
+                                   margin_b=self.__margin,
+                                   margin_r=self.__margin)
+        self.setLayout(layout)
+        return None
+
+    def __accept(self):
+        if self.__line_input_old_pw.text() == "":
+            self.__label_info.setStyleSheet("color:orange;")
+            self.__label_info.setText("Please input your old UDAS password.")
+
+        elif self.__line_input_new_pw.text() == "":
+            self.__label_info.setStyleSheet("color:orange;")
+            self.__label_info.setText("Please input your new UDAS password.")
+
+        elif self.__line_input_new_repw.text() == "":
+            self.__label_info.setStyleSheet("color:orange;")
+            self.__label_info.setText("Please input your new UDAS password at last input.")
+
+        elif not self.__is_new_password_match():
+            self.__label_info.setStyleSheet("color:red;")
+            self.__label_info.setText("New Password is not Match. Please retype again.")
+
+        else:
+            cmd_result = change_password(old_pw=encrypt_str(string=self.__line_input_old_pw.text()),
+                                         new_pw=encrypt_str(string=self.__line_input_new_pw.text()))
+            if cmd_result.returncode != 0:
+                self.__label_info.setStyleSheet("color:red;")
+                self.__label_info.setText("Current Password is not match. Please retype again.")
+            else:
+                self.accept()
+
+
+    def __is_new_password_match(self) -> bool:
+        return self.__line_input_new_pw.text() == self.__line_input_new_repw.text()
+
+
 class CustomDialogPasswordInput(QDialog):
     def __init__(self, **kwargs):
         super().__init__()
@@ -393,7 +534,7 @@ class CustomDialogPasswordInput(QDialog):
                                         width=self.__btn_width,
                                         height=self.__btn_height,)
 
-        btn_enter = custom_push_button(text="Override",
+        btn_enter = custom_push_button(text="OK",
                                        width=self.__btn_width,
                                        height=self.__btn_height,
                                        default=True)
@@ -424,14 +565,16 @@ class CustomDialogPasswordInput(QDialog):
         self.setLayout(layout_password)
 
     def __accept(self):
-        # 2025.06.07: require encryption.
-        input_password = self.line_input_password.text()
+        if self.line_input_password.text() == "":
+            self.label_result.setStyleSheet("color: orange; font-weight:500;")
+            self.label_result.setText("Please input your UDAS password.")
 
-        if input_password == self.__auth_str:
-            self.accept()
-        else:
-            self.label_result.setText("Not Authorized")
+        elif encrypt_str(string=self.line_input_password.text()) != self.__auth_str:
             self.label_result.setStyleSheet("color: red; font-weight:500;")
+            self.label_result.setText("Not Authorized")
+
+        else:
+            self.accept()
 
     def reject(self, exit_code: int=-1):
         exit_process(exit_code)

@@ -301,7 +301,7 @@ int main (int argc, char * argv[])
 						if (strncmp(buffer, "level=", 6) == 0) 
 						{
 							char tmp[32];
-							sprintf(tmp, "level=%s", loglevel);
+							sprintf(tmp, "level=%s\n", loglevel);
 							fputs(tmp, config_file_tmp);
 							continue;
 						}

@@ -2,6 +2,7 @@ from udas.udas_pytool import (QMainWindow,
                               QApplication,
                               ConfigIni,
                               centralise_fixed,
+                              change_loglevel,
                               clear_layout,
                               create_menubar,
                               get_rules,
@@ -9,17 +10,16 @@ from udas.udas_pytool import (QMainWindow,
                               get_service_status,
                               remove_registered_usb_info,
                               sys,)
-from udas.udas_custom_widget import (CustomDialogPasswordInput,
+from udas.udas_custom_widget import (CustomComboboxWithButton,
+                                     CustomDialogPasswordInput,
                                      CustomTableWithOneButton,
                                      custom_box_layout,
-                                     custom_label_combobox_for_control,
                                      custom_push_button,
                                      custom_label,
                                      custom_labels_kv,
                                      custom_label_button_for_control,
                                      custom_separate_line,
                                      custom_splitter_fixed,
-                                     custom_table,
                                      custom_widget_for_layout,)
 
 
@@ -55,14 +55,18 @@ LAYOUT_MAIN_CONTENT_MARGIN:int = 20
 class MainWindow(QMainWindow):
     def __init__(self, **kwargs):
         super().__init__()
-        # get config
-        self.__config = ConfigIni()
 
         # set window structure
         self.__init_ui(kwargs)
 
         # display main screen.
         self.__main()
+
+    def __change_loglevel(self, combobox, item_list: list):
+        cmd_result = change_loglevel(item_list[combobox.currentIndex()].lower())
+        if cmd_result.returncode == 0:
+            self.__settings()
+        return None
 
     def __create_menubar(self):
         # define menubar structure
@@ -272,10 +276,10 @@ class MainWindow(QMainWindow):
         layout_test = custom_box_layout(children=[widget_table_button_blacklist,
                                                   custom_separate_line(color=COLOR_SEPARATE_LINE),
                                                   widget_table_button_whitelist],
-                                        margin_l=20,
-                                        margin_t=20,
-                                        margin_r=20,
-                                        margin_b=20)
+                                        margin_l=margin,
+                                        margin_t=margin,
+                                        margin_r=margin,
+                                        margin_b=margin)
 
         self.widget_main_content.setLayout(layout_test)
         return None
@@ -337,6 +341,7 @@ class MainWindow(QMainWindow):
         clear_layout(self.widget_main_content)
 
         # get data
+        config = ConfigIni()
         service_data = self.__read_service_kpi_data()
 
         # set the size of widgets
@@ -344,6 +349,7 @@ class MainWindow(QMainWindow):
         button_width: int = 80
         combobox_width: int = 120
         height: int = 30
+        item_list: list = ["CRITICAL", "WARNING", "INFO", "DEBUG"]
 
         label_settings_preamble = custom_label(text="<b>UDAS Settings</b>",
                                                width=total_width,
@@ -363,7 +369,7 @@ class MainWindow(QMainWindow):
                                                                        ratio=0.7,
                                                                        info_text="Apply Blacklist [On / Off]",
                                                                        button_width=button_width,
-                                                                       button_text="OFF" if self.__config.get_blacklist() else "ON",
+                                                                       button_text="OFF" if config.get_blacklist() else "ON",
                                                                        button_style=BUTTON_GENERAL_STYLE,
                                                                        status_tip="Edit blacklist setting...")
 
@@ -376,18 +382,22 @@ class MainWindow(QMainWindow):
                                                                       button_style=BUTTON_GENERAL_STYLE,
                                                                       status_tip="Change UDAS Password...")
 
-        label_logging_preamble = custom_label(text="<b>Logging</b>",
-                                               width=total_width,
-                                               height=30)
+        label_logging_preamble = custom_label(text="<b>Logging</b>", width=total_width, height=30)
 
-        widget_layout_ctrl_loglevel = custom_label_combobox_for_control(total_width=total_width,
-                                                                        height=height,
-                                                                        ratio=0.6,
-                                                                        info_text="UDAS Log Level",
-                                                                        combobox_width=combobox_width,
-                                                                        combobox_items=["CRITICAL", "INFO"],
-                                                                        default_item=self.__config.get_log_level(),
-                                                                        status_tip="Change log level...",)
+        widget_layout_ctrl_loglevel = CustomComboboxWithButton(total_width=total_width,
+                                                               total_height=height,
+                                                               ratio=0.4,
+                                                               label_text="UDAS Log Level",
+                                                               combobox_width=combobox_width,
+                                                               combobox_items=["CRITICAL", "WARNING", "INFO", "DEBUG"],
+                                                               combobox_default=config.get_log_level(),
+                                                               button_width=button_width,
+                                                               button_text="Apply",
+                                                               button_status_tip="Change log level...",
+                                                               button_style=BUTTON_GENERAL_STYLE,
+                                                               button_connect=lambda: self.__change_loglevel(
+                                                                   combobox=widget_layout_ctrl_loglevel.combobox,
+                                                                   item_list=item_list),)
 
         layout = custom_box_layout(children=[label_settings_preamble,
                                              widget_layout_ctrl_service,
@@ -424,10 +434,12 @@ if __name__ == "__main__":
     app = QApplication()
 
     # if cancelled , entire process will be terminated.
+    """
     pw_dialog = CustomDialogPasswordInput(title=DIALOG_PASSWORD_TITLE,
                                           width=DIALOG_PASSWORD_WIDTH,
                                           height=DIALOG_PASSWORD_HEIGHT)
     pw_dialog.exec()
+    """
 
     # main window.
     window = MainWindow(title="USB Docking Authentication System",

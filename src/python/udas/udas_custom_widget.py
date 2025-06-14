@@ -15,8 +15,7 @@ from .udas_pytool import (Qt,
                          QTableWidgetItem,
                          QAbstractItemView,
                          ConfigIni,
-                         exit_process,
-                         remove_registered_usb_info,)
+                         exit_process,)
 
 
 def custom_box_layout(children: list,
@@ -290,16 +289,24 @@ def custom_label_button_for_control(total_width: int,
     widget.setLayout(layout)
     return widget
 
+
+
+
+
 def custom_label_combobox_for_control(total_width: int,
                                       height: int,
                                       ratio: float,
                                       info_text: str,
                                       combobox_width: int,
                                       combobox_items: list,
+                                      button_width: int,
+                                      button_text: str,
                                       default_item: str,
                                       style: str | None = None,
                                       info_style: str | None = None,
                                       combobox_style: str | None = None,
+                                      button_style: str | None = None,
+                                      button_connect: Any  = None,
                                       status_tip: str | None = None,
                                       align: str = "center",
                                       spacing: int = 10,) -> QWidget:
@@ -314,7 +321,18 @@ def custom_label_combobox_for_control(total_width: int,
                                items_list=combobox_items,
                                default_item=default_item,
                                status_tip=status_tip,)
-    layout = custom_box_layout(children=[label_info, combobox],
+    button = custom_push_button(width=button_width,
+                                height=height,
+                                text=button_text,
+                                style=button_style,
+                                enable=False,
+                                connect=button_connect)
+
+    # set the connection with slot.
+    combobox.currentIndexChanged.connect(lambda: button.setEnabled(True))
+    button.clicked.connect(button_connect)
+
+    layout = custom_box_layout(children=[label_info, combobox, button],
                                vertical=False,
                                align=align,
                                spacing=spacing)
@@ -322,6 +340,64 @@ def custom_label_combobox_for_control(total_width: int,
     widget = custom_widget_for_layout(width=total_width, height=height, style=style)
     widget.setLayout(layout)
     return widget
+
+
+class CustomComboboxWithButton(QWidget):
+    def __init__(self, **kwargs):
+        super().__init__()
+
+        self.__total_width: int = kwargs.get("total_width")
+        self.__total_height: int = kwargs.get("total_height")
+        self.__ratio: float = kwargs.get("ratio")
+
+        self.__label_text: str = kwargs.get("label_text")
+        self.__label_style: str | None = kwargs.get("label_style", None)
+
+        self.__combobox_width: int = kwargs.get("combobox_width")
+        self.__combobox_items: list = kwargs.get("combobox_items")
+        self.__combobox_default: str = kwargs.get("combobox_default")
+        self.__combobox_style: str | None = kwargs.get("combobox_style", None)
+
+        self.__button_width: int = kwargs.get("button_width")
+        self.__button_text: str = kwargs.get("button_text")
+        self.__button_status_tip: str = kwargs.get("button_status_tip", "")
+        self.__button_style: str | None = kwargs.get("button_style", None)
+        self.__button_connect: Any = kwargs.get("button_connect")
+
+        # init_ui
+        self.__init_ui()
+
+    def __init_ui(self):
+        label = custom_label(text=self.__label_text,
+                             width=int(self.__total_width * self.__ratio),
+                             height=self.__total_height,
+                             style=self.__label_style)
+
+        self.combobox = custom_combobox(width=self.__combobox_width,
+                                        height=self.__total_height,
+                                        items_list=self.__combobox_items,
+                                        default_item=self.__combobox_default,
+                                        style=self.__combobox_style)
+
+        self.__button = custom_push_button(text=self.__button_text,
+                                         width=self.__button_width,
+                                         height=self.__total_height,
+                                         status_tip=self.__button_status_tip,
+                                         style=self.__button_style,
+                                         connect=self.__button_connect,
+                                         enable=False)
+
+        self.__combo_default_index = self.combobox.currentIndex()
+        self.combobox.currentIndexChanged.connect(self.__on_change_combobox)
+
+        layout = custom_box_layout(children=[label, self.combobox, self.__button], vertical=False,)
+        self.setLayout(layout)
+        return None
+
+    def __on_change_combobox(self):
+        self.__button.setEnabled(True) if self.combobox.currentIndex() != self.__combo_default_index \
+            else self.__button.setEnabled(False)
+        return None
 
 
 class CustomDialogPasswordInput(QDialog):
@@ -409,6 +485,7 @@ class CustomDialogPasswordInput(QDialog):
 
     def reject(self, exit_code: int=-1):
         exit_process(exit_code)
+
 
 class CustomTableWithOneButton(QWidget):
     def __init__(self, **kwargs):

@@ -1,3 +1,4 @@
+import subprocess
 import sys
 import configparser
 import re
@@ -48,6 +49,10 @@ def centralise_fixed(obj, width: int, height: int):
     obj.move(window_x, window_y)
     obj.setFixedSize(width, height)
     return None
+
+def change_loglevel(log_level:str) -> subprocess.CompletedProcess:
+    command: str = f"pkexec udas set loglevel {log_level}"
+    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
 
 def clear_layout(widget):
     old_layout = widget.layout()
@@ -134,8 +139,12 @@ def get_service_status() -> dict:
         ret_value["uptime"] = f"{tmp[-3]} {tmp[-2]}" if "h" in tmp[-3] else f"{tmp[-2]}"
     return ret_value
 
-def remove_registered_usb_info(id_vendor: str, id_product:str, serial:str, manufacturer:str, product:str, blacklist:bool=False):
-
+def remove_registered_usb_info(id_vendor: str,
+                               id_product:str,
+                               serial:str,
+                               manufacturer:str,
+                               product:str,
+                               blacklist:bool=False) -> subprocess.CompletedProcess:
     id_vendor = id_vendor if id_vendor != "N/A" else "Unknown"
     id_product = id_product if id_product != "N/A" else "Unknown"
     serial = serial if serial != "N/A" else "Unknown"
@@ -143,10 +152,8 @@ def remove_registered_usb_info(id_vendor: str, id_product:str, serial:str, manuf
     product = product if product != "N/A" else "Unknown"
     blacklist = "blacklist" if blacklist else "whitelist"
 
-    # change the command path: 2025.06.11
     command: str = f"pkexec udas td remove {blacklist} --idVendor={id_vendor} --idProduct={id_product} --serial={serial} --manufacturer={manufacturer} --product={product}"
-    test = run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
-    return test
+    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
 
 
 class ConfigIni:

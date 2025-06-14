@@ -81,14 +81,13 @@ void create_udev_rule(USB_DEV * usb_dev, char ** rule_str)
 		strcat(rule_line, product);
 	}
 
-	//strcat(rule_line, "ENV{UDISKS_IGNORE}=\"0\"\n");
-	strcpy(*rule_str, rule_line);
+	strncpy(*rule_str, rule_line, strlen(rule_line));
 	fprintf(stdout, "[INFO] Successfully create draft rule string for newly connected USB storage.\n");
 }
 
 int register_td(char ** rule_str, USB_DEV * usb_dev, int blacklist)
 {
-	strcat(*rule_str, (blacklist == 0) ? "ENV{UDISKS_IGNORE}=\"0\"\n" : "ENV{UDISKS_IGNORE}=\"1\"\n");
+	strncat(*rule_str, (blacklist == 0) ? "ENV{UDISKS_IGNORE}=\"0\"\n" : "ENV{UDISKS_IGNORE}=\"1\"\n", strlen("ENV{UDISKS_IGNORE}=\"0\"\n"));
 	fprintf(stdout, (blacklist == 1) ? "[INFO] Start registering blacklist USB Storage " : "[INFO] Start registering whitelist USB Storage ");
 	fprintf(
 		stdout,

@@ -1,3 +1,4 @@
+#include "./udas_common.h"
 #include "./udas_detector.h"
 
 
@@ -75,16 +76,39 @@ USB_INFO get_usb_dev(libusb_device * device, libusb_device_descriptor * desc)
     return usb_info;
 }
 
-int register_device(USB_INFO * usb_info)
+int get_blacklist_setting()
+{
+    FILE * config_file = fopen(CONFIG_FILE_PATH, "r");
+    if (config_file == NULL) return 0;
+
+    char buffer[256];
+    while (fgets(buffer, sizeof(buffer), config_file) != NULL)
+    {
+        if (strncmp(buffer, "blacklist", strlen("blacklist")) == 0)
+        {
+            char * token = strtok(buffer, "=");
+            token = strtok(NULL, "=");
+            if (strncmp(token, "1", 1) == 0) return 1;
+            break;
+        }
+    }
+
+    return 0;
+}
+
+int register_device(USB_INFO * usb_info, int blacklist)
 {
     int cmd_result = -1;
     char command[256];
     char buffer[64];
+    char reg_opt[16];
+    (blacklist == 0) ? strncpy(reg_opt, "whitelist", sizeof("whitelist")) : strncpy(reg_opt, "blacklist", sizeof("blacklist")) ;
 
     // create command to register new usb storage device to udev rule file
     if (snprintf(command,
             sizeof(command),
-            "udas td register --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s",
+            "udas td register %s --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s",
+            reg_opt,
             usb_info->manufacture_id,
             usb_info->product_id,
             usb_info->serialnum,
@@ -99,7 +123,8 @@ int register_device(USB_INFO * usb_info)
     FILE * cmd = popen(command, "r");
     while (fgets(buffer, sizeof(buffer), cmd) != NULL)
     {
-        if (strcmp(buffer, "success to regiser new trusted USB storage.\n") == 0) return EXIT_SUCCESS;
+        if ((strcmp(buffer, "success to register new whitelist USB storage.\n") == 0) || \
+            (strcmp(buffer, "success to register blacklist device.\n"))) return EXIT_SUCCESS;
     }
     // close pipe and remove file pointre.
     pclose(cmd);
@@ -108,7 +133,7 @@ int register_device(USB_INFO * usb_info)
 
 int search_device(USB_INFO * usb_info)
 {
-    int cmd_result = -1;
+    int cmd_result = 0;
     char command[256];
     char return_print[64];
 
@@ -130,23 +155,28 @@ int search_device(USB_INFO * usb_info)
     FILE * cmd = popen(command, "r");
     while (fgets(return_print, sizeof(return_print), cmd) != NULL)
     {
-        if (strcmp(return_print, "[INFO] registered device\n") == 0)
+        if (strncmp(return_print, "[INFO] Device is registered as whitelist.\n", strlen("[INFO] Device is registered as whitelist.\n")) == 0)
         {
-            cmd_result = 0;
+            cmd_result = 1;
             break;
+        }
+        else if (strncmp(return_print, "[INFO] Device is registered as blacklist.\n", strlen("[INFO] Device is registered as blacklist.\n")) == 0)
+        {
+
+            cmd_result = -1;
         }
     }
 
     // close pipe and remove file pointre.
     pclose(cmd);
-
-    if (cmd_result != 0)
+    
+    if (cmd_result == 0)
     {
         fprintf(stdout, "[INFO] Not a registered USB storage\n");
         return EXIT_SUCCESS;
     }
-    
-    fprintf(stdout, "[INFO] Already registered USB storage\n");
+    else if (cmd_result != 1) fprintf(stdout, "[INFO] Already registered USB storage as whitelist.\n");
+    else if (cmd_result != -1) fprintf(stdout, "[INFO] Already registered USB storage as blacklist.\n");
     return EXIT_FAILURE;
 }
 
@@ -186,7 +216,7 @@ void * call_gui_alert_thread(USB_INFO * usb_info)
     // check duplicate execution for udas_alert
     if (is_udas_alert_run(usb_info) != EXIT_SUCCESS)
     {
-        printf("[WARNING] Process for the same USB storage is already Running.\n");
+        fprintf(stdout, "[WARNING] Process for the same USB storage is already Running.\n");
         return NULL;
     }
 
@@ -200,19 +230,20 @@ void * call_gui_alert_thread(USB_INFO * usb_info)
         return NULL;
     }
 
+    // child process for udas_alert
+    char idVendor[64], idProduct[64], serial[64], manufacturer[64], product[64];
+    fprintf(stdout, "[INFO] (udas_alert) Asking about new USB storage...\n");
+    snprintf(idVendor, sizeof(idVendor), "--idVendor=%04x", usb_info->manufacture_id);
+    snprintf(idProduct, sizeof(idProduct), "--idProduct=%04x", usb_info->product_id);
+    snprintf(serial, sizeof(serial), "--serial=%s", usb_info->serialnum);
+    snprintf(manufacturer, sizeof(manufacturer), "--manufacturer=%s", usb_info->manufacture);
+    snprintf(product, sizeof(product), "--product=%s", usb_info->product);
+
     if (child_proc == 0)
     {
-        // child process for udas_alert
-        char idVendor[64], idProduct[64], serial[64], manufacturer[64], product[64];
-        fprintf(stdout, "[INFO] (udas_alert) Asking about new USB storage...\n");
-        snprintf(idVendor, sizeof(idVendor), "--idVendor=%04x", usb_info->manufacture_id);
-        snprintf(idProduct, sizeof(idProduct), "--idProduct=%04x", usb_info->product_id);
-        snprintf(serial, sizeof(serial), "--serial=%s", usb_info->serialnum);
-        snprintf(manufacturer, sizeof(manufacturer), "--manufacturer=%s", usb_info->manufacture);
-        snprintf(product, sizeof(product), "--product=%s", usb_info->product);
         execlp("udas_alert", "udas_alert", idVendor, idProduct, serial, manufacturer, product, NULL);
         
-        // exit child process with error code.
+        // exit child process with error code if fail to execute command.
         exit(-2);
     }
     else
@@ -228,13 +259,23 @@ void * call_gui_alert_thread(USB_INFO * usb_info)
             // 0: Success, 255: Cancel
             if (exit_code == 0)
             {
-                (register_device(usb_info) == EXIT_SUCCESS) ?
-                fprintf(stdout, "[INFO] Success to register new USB storage as a trusted device.\n"):
-                fprintf(stderr, "[ERROR] Fail to register new USB storage as a trusted device.\n");
+                (register_device(usb_info, 0) == EXIT_SUCCESS) ?
+                fprintf(stdout, "[INFO] Success to register new USB storage as whitelist.\n"):
+                fprintf(stderr, "[ERROR] Fail to register new USB storage as whitelist.\n");
             }
             else if (exit_code == 253) fprintf(stderr, "[ERROR] Config file is not exist.\n");
             else if (exit_code == 254) fprintf(stderr, "[ERROR] Can not find the udas_alert.\n");
-            else fprintf(stderr, "[INFO] New USB storage is not registered as a trusted device.\n") ;
+            else 
+            {
+                int blacklist = get_blacklist_setting();                
+                if (blacklist == 0) fprintf(stderr, "[INFO] New USB storage is not registered as whitelist.\n");
+                else
+                {
+                    (register_device(usb_info, 1) == EXIT_SUCCESS) ?
+                    fprintf(stdout, "[INFO] New USB storage is registered as blacklist.\n"):
+                    fprintf(stderr, "[ERROR] Fail to register new USB storage as blacklist.\n");
+                }                
+            }
         }
         else if (WIFSIGNALED(status)) fprintf(stderr, "[ERROR] udas_alert is terminated by signal.\n");
     }

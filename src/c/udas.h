@@ -14,8 +14,11 @@
         char idProduct[8];
     } USB_DEV;
 
-    #define CUSTOM_DEFAULT_RULE "/etc/udev/rules.d/99-udas.custom.rules"
-    #define CUSTOM_DEFAULT_RULE_TMP "/etc/udev/rules.d/99-udas.custom.rules_tmp"
+    #define CONFIG_FILE_TMP_PATH "/etc/udas/config/config.ini_tmp"
+    #define CUSTOM_BLACKLIST_RULE "/etc/udev/rules.d/99-udas.blacklist.rules"
+    #define CUSTOM_BLACKLIST_RULE_TMP "/etc/udev/rules.d/99-udas.blacklist.rules_tmp"
+    #define CUSTOM_WHITELIST_RULE "/etc/udev/rules.d/99-udas.custom.rules"
+    #define CUSTOM_WHITELIST_RULE_TMP "/etc/udev/rules.d/99-udas.custom.rules_tmp"
     #define DEFAULT_UDEV_RULE "ACTION==\"add\", SUBSYSTEM==\"block\", "
     #define OPTION_DELIMITER "="
     #define OPTION_ID_VENDOR "--idVendor"

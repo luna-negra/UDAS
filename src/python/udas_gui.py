@@ -7,8 +7,8 @@ from udas.udas_pytool import (QMainWindow,
                               get_rules,
                               get_rule_num,
                               get_service_status,
-                              sys,
-                              QLabel, Qt)
+                              remove_registered_usb_info,
+                              sys,)
 from udas.udas_custom_widget import (CustomDialogPasswordInput,
                                      CustomTableWithOneButton,
                                      custom_box_layout,
@@ -248,6 +248,7 @@ class MainWindow(QMainWindow):
             button_style=BUTTON_GENERAL_STYLE,
             button_enable=False,
             button_status_tip="Remove selected blacklist...",
+            button_connect=lambda: self.__remove_registered_rule(table=widget_table_button_blacklist.table, blacklist=True)
         )
 
         widget_table_button_whitelist = CustomTableWithOneButton(
@@ -265,10 +266,7 @@ class MainWindow(QMainWindow):
             button_style=BUTTON_GENERAL_STYLE,
             button_enable=False,
             button_status_tip="Remove selected whitelist...",
-            margin_l=margin,
-            margin_t=margin,
-            margin_r=margin,
-            margin_b=margin,
+            button_connect=lambda: self.__remove_registered_rule(table=widget_table_button_whitelist.table),
         )
 
         layout_test = custom_box_layout(children=[widget_table_button_blacklist,
@@ -282,6 +280,44 @@ class MainWindow(QMainWindow):
         self.widget_main_content.setLayout(layout_test)
         return None
 
+    def __remove_registered_rule(self, table, blacklist:bool=False):
+        selected_item: list = table.selectedItems()
+        row: int = table.currentRow()
+        manufacturer, id_vendor = [text.strip("()") for text in selected_item[0].text().split()]
+        product, id_product = [text.strip("()") for text in selected_item[1].text().split()]
+        serial = selected_item[2].text()
+
+        cmd_result = remove_registered_usb_info(id_vendor=id_vendor,
+                                                id_product=id_product,
+                                                serial=serial,
+                                                manufacturer=manufacturer,
+                                                product=product,
+                                                blacklist=blacklist, )
+
+        # exit_code:
+        # 0 - OK,
+        # 1 - Error with command usage,
+        # 126 - cancelled,
+        # 127 - Not exist command
+        exit_code = cmd_result.returncode
+        if exit_code == 0:
+            table.removeRow(row)
+            # MessageBox
+
+        elif exit_code == 1:
+            print("[ERROR] COMMAND ERROR")
+            print(exit_code)
+            # MessageBox
+
+        elif exit_code == 127:
+            print("[ERROR] NO COMMAND EXIST")
+            # MessageBox
+
+        else:
+            print(exit_code)
+            print(cmd_result.stdout)
+
+        return None
 
     def __read_status_kpi_data(self) -> dict:
         return {

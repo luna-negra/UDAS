@@ -219,6 +219,94 @@ int search_td(char ** rule_str, USB_DEV * usb_dev)
 	return EXIT_SUCCESS;
 }
 
+int set_loglevel(FILE * config_file, FILE * config_file_tmp, char * loglevel)
+{
+	//Loglevel: Debug, Info, Warning, Critical
+	int result = EXIT_FAILURE;
+
+	if ((strncmp(loglevel, "debug", 5) == 0) || (strncmp(loglevel, "info", 4) == 0)|| (strncmp(loglevel, "warning", 7) == 0) || (strncmp(loglevel, "critical", 8) == 0))
+	{
+		char buffer[256];
+		while (fgets(buffer, sizeof(buffer), config_file) != NULL)
+		{
+			if (strncmp(buffer, "level=", 6) == 0) 
+			{
+				char tmp[32];
+				sprintf(tmp, "level=%s\n", loglevel);
+				fputs(tmp, config_file_tmp);
+				result = EXIT_SUCCESS;
+				continue;
+			}
+
+			fputs(buffer, config_file_tmp);
+		}
+	}
+	
+	return result;
+}
+
+int set_password(FILE * config_file, FILE * config_file_tmp, char * old_password, char * new_password)
+{
+	// udas set passwd --old-password=pw --new-password=newpw
+	int result = EXIT_FAILURE;
+		
+	char * token_old_pw = strtok(old_password, "=");
+	token_old_pw = strtok(NULL, "=");
+	sprintf(old_password, "auth_str=%s\n", token_old_pw);
+
+	char * token_new_pw = strtok(new_password, "=");
+	token_new_pw = strtok(NULL, "=");
+	sprintf(new_password, "auth_str=%s\n", token_new_pw);
+
+	char buffer[256];
+	while (fgets(buffer, sizeof(buffer), config_file) != NULL)
+	{
+		if (strncmp(buffer, old_password, strlen(old_password)) == 0)
+		{
+			fputs(new_password, config_file_tmp);
+			result = EXIT_SUCCESS;
+			continue;
+		}
+		fputs(buffer, config_file_tmp);
+	}
+
+	return result;
+}
+
+int set_blacklist(FILE * config_file, FILE * config_file_tmp, char * blacklist)
+{
+	/* udas set blacklist on , udas set blacklist off */
+	int result = EXIT_FAILURE;
+
+	if ((strncmp(blacklist, "on", 2) == 0) || (strncmp(blacklist, "off", 3) == 0))
+	{
+		char buffer[256];
+		while (fgets(buffer, sizeof(buffer), config_file) != NULL)
+		{
+			if (strncmp(buffer, "blacklist=", 10) == 0) 
+			{
+				char tmp[32];
+				sprintf(tmp, "blacklist=%d\n", (strncmp(blacklist, "off", 3) == 0) ? 0 : 1 );
+				fputs(tmp, config_file_tmp);
+				result = EXIT_SUCCESS;
+				continue;
+			}
+
+			fputs(buffer, config_file_tmp);
+		}
+	}
+
+	return result;
+}
+
+void reload_and_trigger()
+{
+	int reload_result = system("udevadm control --reload");
+	int reload_trigger = system("udevadm trigger");
+	return ;
+}
+
+
 int main (int argc, char * argv[])
 {
 	int not_filtered = -1;
@@ -252,7 +340,7 @@ int main (int argc, char * argv[])
 				
 				if (types != -1)
 				{
-					if (register_td(&rule_str, &usb_dev, types) == EXIT_SUCCESS) not_filtered = 0;
+					if ((register_td(&rule_str, &usb_dev, types) == EXIT_SUCCESS) && (types == 0)) not_filtered = 1;
 				}
 			}
 			else if ((strncmp(argv[2], "search", strlen("search"))) == 0)
@@ -267,9 +355,11 @@ int main (int argc, char * argv[])
 				else if(strncmp(argv[3], "whitelist", strlen("whitelist")) == 0) types = 0 ;
 				if (types != -1)
 				{
-					if (remove_td(&rule_str, &usb_dev, types) == EXIT_SUCCESS) not_filtered =0;
+					if (remove_td(&rule_str, &usb_dev, types) == EXIT_SUCCESS) not_filtered = 0;
 				}
 			}
+			
+			if (not_filtered == 1) reload_and_trigger();
 		}
 
 		free(rule_str);
@@ -286,89 +376,17 @@ int main (int argc, char * argv[])
 			return EXIT_FAILURE;
 		}
 
-		if ((strncmp(argv[2], "loglevel", strlen("loglevel"))) == 0)
+		if (((strncmp(argv[2], "loglevel", strlen("loglevel"))) == 0) && (argc == 4))
 		{
-			if (argc == 4)
-			{
-				//Loglevel: Debug, Info, Warning, Critical
-				char * loglevel = *(argv + 3);
-
-				if ((strncmp(loglevel, "debug", 5) == 0) || (strncmp(loglevel, "info", 4) == 0)|| (strncmp(loglevel, "warning", 7) == 0) || (strncmp(loglevel, "critical", 8) == 0))
-				{
-					char buffer[256];
-					while (fgets(buffer, sizeof(buffer), config_file) != NULL)
-					{
-						if (strncmp(buffer, "level=", 6) == 0) 
-						{
-							char tmp[32];
-							sprintf(tmp, "level=%s\n", loglevel);
-							fputs(tmp, config_file_tmp);
-							continue;
-						}
-
-						fputs(buffer, config_file_tmp);
-					}
-
-					not_filtered = 0;
-				}
-			}
+			if (set_loglevel(config_file, config_file_tmp, *(argv + 3)) == EXIT_SUCCESS) not_filtered = 0;
 		}
-		else if ((strncmp(argv[2], "passwd", strlen("passwd"))) == 0)
+		else if (((strncmp(argv[2], "passwd", strlen("passwd"))) == 0) && (argc == 5))
 		{
-			if (argc == 5)
-			{
-				// udas set passwd --old-password=pw --new-password=newpw
-				char * old_password = *(argv + 3);
-				char * new_password = *(argv + 4);
-				
-				char * token_old_pw = strtok(old_password, "=");
-				token_old_pw = strtok(NULL, "=");
-				sprintf(old_password, "auth_str=%s\n", token_old_pw);
-
-				char * token_new_pw = strtok(new_password, "=");
-				token_new_pw = strtok(NULL, "=");
-				sprintf(new_password, "auth_str=%s\n", token_new_pw);
-
-				char buffer[256];
-				while (fgets(buffer, sizeof(buffer), config_file) != NULL)
-				{
-					if (strncmp(buffer, old_password, strlen(old_password)) == 0)
-					{
-						fputs(new_password, config_file_tmp);
-						continue;
-					}
-					fputs(buffer, config_file_tmp);
-				}
-
-				not_filtered = 0;
-			}
+			if (set_password(config_file, config_file_tmp, *(argv + 3), *(argv + 4)) == EXIT_SUCCESS) not_filtered = 0;
 		}
-		else if ((strncmp(argv[2], "blacklist", strlen("blacklist"))) == 0)
+		else if (((strncmp(argv[2], "blacklist", strlen("blacklist"))) == 0) && (argc == 4))
 		{
-			if (argc == 4)
-			{
-				/* udas set blacklist on , udas set blacklist off */
-				char * blacklist = *(argv + 3);
-
-				if ((strncmp(blacklist, "on", 2) == 0) || (strncmp(blacklist, "off", 3) == 0))
-				{
-					char buffer[256];
-					while (fgets(buffer, sizeof(buffer), config_file) != NULL)
-					{
-						if (strncmp(buffer, "blacklist=", 10) == 0) 
-						{
-							char tmp[32];
-							sprintf(tmp, "blacklist=%d\n", (strncmp(blacklist, "off", 3) == 0) ? 0 : 1 );
-							fputs(tmp, config_file_tmp);
-							continue;
-						}
-
-						fputs(buffer, config_file_tmp);
-					}
-
-					not_filtered = 0;
-				}
-			}
+			if (set_blacklist(config_file, config_file_tmp, *(argv + 3)) == EXIT_SUCCESS) not_filtered = 0;
 		}
 
 		fclose(config_file);

@@ -19,9 +19,18 @@ void get_loglevel(char * tmp_level, int size)
             token = strtok(NULL, "=");
             if (token != NULL) 
             {
-                for (int i = 0 ; i < strlen(token) - 1; i++) token[i] -= 32;
+                for (int i = 0 ; i < strlen(token); i++)
+                {
+                    if (token[i] != '\n') token[i] -= 32;
+                    else
+                    {
+                        token[i] = '\0';
+                        break;
+                    }
+                }
 
-                strcpy(tmp_level, token);
+                strncpy(tmp_level, token, strlen(token));
+                tmp_level[strlen(tmp_level)] = '\0';
                 break;
             }
         }
@@ -43,23 +52,25 @@ void logger(char * level, char * app_name, char * log_text)
         return ;
     }
 
-    char tmp_level[16], current_time[32], log[512] = "", print_out[256];
+    char config_level[16] = "", current_time[32] = "", log[512] = "", print_out[1024] = "";
 
-    get_loglevel(tmp_level, sizeof(tmp_level));
+    get_loglevel(config_level, sizeof(config_level));
     strftime(current_time, sizeof(current_time), "%Y-%m-%d %H:%M:%S %s", localtime(&now));
     snprintf(log, sizeof(log), "%s: [%s - %s]  %s\n", current_time, app_name, level, log_text);
+    snprintf(print_out, sizeof(print_out), "[%s] %s", level, log_text);
 
-    int tmp_level_num, log_level_num;
-
-    for (int i = 0; i < 4; i++)
+    int config_level_num = 0, log_level_num = 0;
+    for (int i = 0 ; i < 4; i++)
     {
-        if (*(level_num + i) == tmp_level) tmp_level_num = i;
-        if (*(level_num + i) == level) log_level_num = i;
+        if (strncmp(config_level, level_num[i], strlen(level_num[i])) == 0) config_level_num = i;
+        if (strncmp(level, level_num[i], strlen(level_num[i])) == 0) log_level_num = i;
     }
 
-    if (tmp_level_num >= log_level_num) fputs(log, log_file);
-    fprintf(stdout, "[%s] %s\n", level, log_text);
-
+    if (config_level_num >= log_level_num) 
+    {
+        fputs(log, log_file);
+        fprintf(stdout, "%s\n", print_out);
+    }
     fclose(log_file);
     return ;
 }

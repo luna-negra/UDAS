@@ -51,6 +51,10 @@ def centralise_fixed(obj, width: int, height: int):
     obj.setFixedSize(width, height)
     return None
 
+def change_allow_ns(opt: str) -> subprocess.CompletedProcess:
+    command: str = f"pkexec udas set allow_ns {opt}"
+    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
+
 def change_blacklist(opt: str) -> subprocess.CompletedProcess:
     command: str = f"pkexec udas set blacklist {opt}"
     return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
@@ -181,6 +185,7 @@ class ConfigIni:
 
         else:
             self.__version = self.__config["Version"].get("version")
+            self.__allow_ns = self.__config["Management"].get("allow_non_serial")
             self.__auth_str = self.__config["Management"].get("auth_str")
             self.__blacklist = self.__config["Management"].get("blacklist")
             self.__lang = self.__config["Management"].get("lang")
@@ -189,6 +194,13 @@ class ConfigIni:
 
     def get_version(self):
         return self.__version
+
+    def get_allow_ns(self):
+        try:
+            value = int(self.__allow_ns)
+        except ValueError:
+            return 0
+        return value
 
     def get_auth_str(self):
         return self.__auth_str
@@ -208,6 +220,10 @@ class ConfigIni:
 
     def get_log_level(self):
         return self.__log_level
+
+    def set_allow_ns(self, on_off: int):
+        self.__allow_ns = str(on_off)
+        return None
 
     def set_auth_str(self, enc_auth_str: str):
         self.__auth_str = enc_auth_str

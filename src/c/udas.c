@@ -99,7 +99,7 @@ int register_td(char ** rule_str, USB_DEV * usb_dev, int blacklist)
 	logger("INFO", APP_NAME, "Start registering blacklist USB Storage.") :
 	logger("INFO", APP_NAME, "Start registering whitelist USB Storage.");
 	
-	char tmp[256];
+	char tmp[256] = "";
 	snprintf(
 		tmp, 
 		sizeof(tmp), 
@@ -142,7 +142,7 @@ int remove_td(char ** rule_str, USB_DEV * usb_dev, int blacklist)
 	logger("INFO", APP_NAME, "Start removing registered blacklist USB Storage "): 
 	logger("INFO", APP_NAME, "Start removing registered whitelist USB Storage ");
 
-	char tmp[256];
+	char tmp[256] = "";
 	snprintf(
 		tmp, 
 		sizeof(tmp), 
@@ -154,7 +154,7 @@ int remove_td(char ** rule_str, USB_DEV * usb_dev, int blacklist)
 		(strlen(usb_dev->serial) == 0) ? "Unknown": usb_dev->serial);
 	logger("DEBUG", APP_NAME, tmp);
 
-	char buffer[512];
+	char buffer[512] = "";
 	char * rule_file_name = (blacklist == 0) ? CUSTOM_WHITELIST_RULE : CUSTOM_BLACKLIST_RULE ;
 	char * rule_file_tmp_name = (blacklist == 0) ? CUSTOM_WHITELIST_RULE_TMP : CUSTOM_BLACKLIST_RULE_TMP ;
 
@@ -194,7 +194,7 @@ int remove_td(char ** rule_str, USB_DEV * usb_dev, int blacklist)
 
 int search_td(char ** rule_str, USB_DEV * usb_dev)
 {
-	char tmp[256];
+	char tmp[256] = "";
 	snprintf(
 		tmp, 
 		sizeof(tmp), 
@@ -207,7 +207,7 @@ int search_td(char ** rule_str, USB_DEV * usb_dev)
 	logger("DEBUG", APP_NAME, tmp);
 
 	int match_flag = 0;
-	char buffer[512];
+	char buffer[512] = "";
 	FILE * whitelist_file = fopen(CUSTOM_WHITELIST_RULE, "r");
 	FILE * blacklist_file = fopen(CUSTOM_BLACKLIST_RULE, "r");
 
@@ -254,7 +254,7 @@ int set_loglevel(FILE * config_file, FILE * config_file_tmp, char * loglevel)
 	//Loglevel: Debug, Info, Warning, Critical
 	int result = EXIT_FAILURE;
 
-	if ((strncmp(loglevel, "debug", 5) == 0) || (strncmp(loglevel, "info", 4) == 0)|| (strncmp(loglevel, "warning", 7) == 0) || (strncmp(loglevel, "critical", 8) == 0))
+	if ((strncmp(loglevel, "debug", 5) == 0) || (strncmp(loglevel, "info", 4) == 0)|| (strncmp(loglevel, "warning", 7) == 0) || (strncmp(loglevel, "error", 5) == 0))
 	{
 		char buffer[256];
 		while (fgets(buffer, sizeof(buffer), config_file) != NULL)
@@ -276,7 +276,7 @@ int set_loglevel(FILE * config_file, FILE * config_file_tmp, char * loglevel)
 		}
 	}
 	
-	logger("WARNING", APP_NAME, "Failed to update log level.");
+	if (result == EXIT_FAILURE) ("WARNING", APP_NAME, "Failed to update log level.");
 	return result;
 }
 
@@ -295,7 +295,7 @@ int set_password(FILE * config_file, FILE * config_file_tmp, char * old_password
 	token_new_pw = strtok(NULL, "=");
 	sprintf(new_password, "auth_str=%s\n", token_new_pw);
 
-	char buffer[256];
+	char buffer[256] = "";
 	while (fgets(buffer, sizeof(buffer), config_file) != NULL)
 	{
 		if (strncmp(buffer, old_password, strlen(old_password)) == 0)
@@ -303,7 +303,7 @@ int set_password(FILE * config_file, FILE * config_file_tmp, char * old_password
 			fputs(new_password, config_file_tmp);
 			result = EXIT_SUCCESS;
 
-			char log[256];
+			char log[256] = "";
 			snprintf(log, sizeof(log), "Succeed to update UDAS password.");
 			logger("INFO", APP_NAME, log);
 			continue;
@@ -311,7 +311,7 @@ int set_password(FILE * config_file, FILE * config_file_tmp, char * old_password
 		fputs(buffer, config_file_tmp);
 	}
 
-	logger("WARNING", APP_NAME, "Failed to update UDAS password.");
+	if (result == EXIT_FAILURE) logger("WARNING", APP_NAME, "Failed to update UDAS password.");
 	return result;
 }
 
@@ -324,18 +324,18 @@ int set_blacklist(FILE * config_file, FILE * config_file_tmp, char * blacklist)
 
 	if ((strncmp(blacklist, "on", 2) == 0) || (strncmp(blacklist, "off", 3) == 0))
 	{
-		char buffer[256];
+		char buffer[256] = "";
 		while (fgets(buffer, sizeof(buffer), config_file) != NULL)
 		{
 			if (strncmp(buffer, "blacklist=", 10) == 0) 
 			{
-				char tmp[32];
+				char tmp[32] = "";
 				sprintf(tmp, "blacklist=%d\n", (strncmp(blacklist, "off", 3) == 0) ? 0 : 1 );
 				fputs(tmp, config_file_tmp);
 				result = EXIT_SUCCESS;
 
-				char log[256];
-				snprintf(log, sizeof(log), "Succeed to update blacklist setting '{%s}'.", blacklist);
+				char log[256] = "";
+				snprintf(log, sizeof(log), "Succeed to update blacklist setting '%s'.", blacklist);
 				logger("INFO", APP_NAME, log);
 				continue;
 			}
@@ -344,7 +344,42 @@ int set_blacklist(FILE * config_file, FILE * config_file_tmp, char * blacklist)
 		}
 	}
 
-	logger("WARNING", APP_NAME, "Failed to update blacklist setting.");
+	if (result == EXIT_FAILURE) logger("WARNING", APP_NAME, "Failed to update blacklist setting.");
+	return result;
+}
+
+int set_allow_ns(FILE * config_file, FILE * config_file_tmp, char * allow_ns)
+{
+	logger("INFO", APP_NAME, "Start update allowing non_serial number setting.");
+
+	/* udas set allow_ns on, udas set allow_ns off*/
+	int result = EXIT_FAILURE;
+
+	if ((strncmp(allow_ns, "on", 2) == 0) || (strncmp(allow_ns, "off", 3) == 0))
+	{
+		char buffer[256] = "";
+		while (fgets(buffer, sizeof(buffer), config_file) != NULL)
+		{
+			if (strncmp(buffer, "allow_non_serial=", strlen("allow_non_serial=")) == 0) 
+			{
+				result = EXIT_SUCCESS;
+				char tmp[32] = "";
+				sprintf(tmp, "allow_non_serial=%d\n", (strncmp(allow_ns, "off", 3) == 0) ? 0 : 1 );
+				fputs(tmp, config_file_tmp);
+				continue;
+			}
+
+			fputs(buffer, config_file_tmp);
+		}
+	}
+
+	if (result == EXIT_SUCCESS)
+	{
+		char log[256] = "";
+		snprintf(log, sizeof(log), "Succeed to update allowing non_serial number setting '%s'.", allow_ns);
+		logger("INFO", APP_NAME, log);
+	}
+	else logger("WARNING", APP_NAME, "Failed to update allowing non_serial number setting.");
 	return result;
 }
 
@@ -445,6 +480,10 @@ int main (int argc, char * argv[])
 		else if (((strncmp(argv[2], "blacklist", strlen("blacklist"))) == 0) && (argc == 4))
 		{
 			if (set_blacklist(config_file, config_file_tmp, *(argv + 3)) == EXIT_SUCCESS) not_filtered = 0;
+		}
+		else if (((strncmp(argv[2], "allow_ns", strlen("allow_ns"))) == 0) && (argc == 4))
+		{
+			if (set_allow_ns(config_file, config_file_tmp, *(argv + 3)) == EXIT_SUCCESS) not_filtered = 0;
 		}
 
 		fclose(config_file);

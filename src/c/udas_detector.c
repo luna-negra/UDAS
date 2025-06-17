@@ -73,7 +73,7 @@ USB_INFO get_usb_dev(libusb_device * device, libusb_device_descriptor * desc)
         usb_info.manufacture_id, usb_info.product_id, usb_info.manufacture, usb_info.product, usb_info.serialnum
     );
 
-    char tmp[256];
+    char tmp[256] = "";
     snprintf(
         tmp, 
         sizeof(tmp), 
@@ -109,9 +109,9 @@ int get_blacklist_setting()
 int register_device(USB_INFO * usb_info, int blacklist)
 {
     int cmd_result = -1;
-    char command[256];
-    char buffer[64];
-    char reg_opt[16];
+    char command[256] = "";
+    char buffer[64] = "";
+    char reg_opt[16] = "";
     (blacklist == 0) ? strncpy(reg_opt, "whitelist", sizeof("whitelist")) : strncpy(reg_opt, "blacklist", sizeof("blacklist")) ;
 
     // create command to register new usb storage device to udev rule file
@@ -133,8 +133,8 @@ int register_device(USB_INFO * usb_info, int blacklist)
     FILE * cmd = popen(command, "r");
     while (fgets(buffer, sizeof(buffer), cmd) != NULL)
     {
-        if ((strcmp(buffer, "success to register new whitelist USB storage.\n") == 0) || \
-            (strcmp(buffer, "success to register blacklist device.\n"))) return EXIT_SUCCESS;
+        if ((strstr(buffer, "success to register new whitelist USB storage.") != NULL) || \
+            (strstr(buffer, "success to register blacklist device.") != NULL)) return EXIT_SUCCESS;
     }
     // close pipe and remove file pointre.
     pclose(cmd);
@@ -144,8 +144,8 @@ int register_device(USB_INFO * usb_info, int blacklist)
 int search_device(USB_INFO * usb_info)
 {
     int cmd_result = 0;
-    char command[256];
-    char return_print[64];
+    char command[256] = "";
+    char return_print[64] = "";
 
     // create command to register new usb storage device to udev rule file
     if (snprintf(command, 
@@ -165,12 +165,12 @@ int search_device(USB_INFO * usb_info)
     FILE * cmd = popen(command, "r");
     while (fgets(return_print, sizeof(return_print), cmd) != NULL)
     {
-        if (strncmp(return_print, "[INFO] Device is registered as whitelist.\n", strlen("[INFO] Device is registered as whitelist.\n")) == 0)
+        if (strstr(return_print, "Device is registered as whitelist.") != NULL)
         {
             cmd_result = 1;
             break;
         }
-        else if (strncmp(return_print, "[INFO] Device is registered as blacklist.\n", strlen("[INFO] Device is registered as blacklist.\n")) == 0)
+        else if (strstr(return_print, "Device is registered as blacklist.") != NULL)
         {
             cmd_result = -1;
             break;
@@ -194,7 +194,7 @@ int is_udas_alert_run(USB_INFO * usb_info)
 {
     int line = 0;
     char command[256] = "ps -aux | grep udas_alert ";
-    char option_idVendor[64], option_idproduct[64], option_serial[64], buffer[512];
+    char option_idVendor[64] = "", option_idproduct[64] = "", option_serial[64] = "", buffer[512] = "";
 
     snprintf(option_idVendor, sizeof(option_idVendor), "| grep %04x ", usb_info->manufacture_id);
     snprintf(option_idproduct, sizeof(option_idproduct), "| grep %04x ", usb_info->product_id);

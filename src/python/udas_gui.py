@@ -2,6 +2,7 @@ from udas.udas_pytool import (QMainWindow,
                               QApplication,
                               ConfigIni,
                               centralise_fixed,
+                              change_allow_ns,
                               change_blacklist,
                               change_loglevel,
                               clear_layout,
@@ -65,6 +66,12 @@ class MainWindow(QMainWindow):
 
         # display main screen.
         self.__main()
+
+    def __change_allow_ns_settings(self, current_value):
+        cmd_result = change_allow_ns(opt="off" if current_value == 1 else "on")
+        if cmd_result.returncode == 0:
+            self.__settings()
+        return None
 
     def __change_blacklist_setting(self, current_value:int):
         cmd_result = change_blacklist(opt="off" if current_value == 1 else "on")
@@ -395,10 +402,20 @@ class MainWindow(QMainWindow):
                                                             ratio=0.7,
                                                             label_text="Apply Blacklist Policy [On / Off]",
                                                             button_width=button_width,
-                                                            button_text="OFF" if config.get_blacklist() else "On",
+                                                            button_text="OFF" if config.get_blacklist() else "ON",
                                                             button_style=BUTTON_GENERAL_STYLE,
                                                             button_status_tip="Edit blacklist setting...",
                                                             connect=lambda: self.__change_blacklist_setting(current_value=config.get_blacklist()))
+
+        widget_layout_ctrl_allow_ns = CustomLabelWithButton(total_width=total_width,
+                                                            height=height,
+                                                            ratio=0.7,
+                                                            label_text="Allow Non Serial Device [On / Off]",
+                                                            button_width=button_width,
+                                                            button_text="OFF" if config.get_allow_ns() else "ON",
+                                                            button_style=BUTTON_GENERAL_STYLE,
+                                                            button_status_tip="Edit allow non serial number device...",
+                                                            connect=lambda: self.__change_allow_ns_settings(current_value=config.get_allow_ns()))
 
         widget_layout_ctrl_password = CustomLabelWithButton(total_width=total_width,
                                                             height=height,
@@ -417,7 +434,7 @@ class MainWindow(QMainWindow):
                                                                ratio=0.4,
                                                                label_text="UDAS Log Level",
                                                                combobox_width=combobox_width,
-                                                               combobox_items=["CRITICAL", "WARNING", "INFO", "DEBUG"],
+                                                               combobox_items=item_list,
                                                                combobox_default=config.get_log_level(),
                                                                button_width=button_width,
                                                                button_text="Apply",
@@ -431,6 +448,7 @@ class MainWindow(QMainWindow):
                                              widget_layout_ctrl_service,
                                              widget_layout_ctrl_blacklist,
                                              widget_layout_ctrl_password,
+                                             widget_layout_ctrl_allow_ns,
                                              custom_separate_line(color=COLOR_SEPARATE_LINE),
                                              label_logging_preamble,
                                              widget_layout_ctrl_loglevel],

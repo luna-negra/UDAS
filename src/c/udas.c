@@ -48,12 +48,13 @@ USB_DEV get_dev_info(int argc, char * argv[])
 		}
 	}
 
-	logger("INFO", APP_NAME, "Successfully parsing USB storage information.\n");
+	logger("INFO", APP_NAME, "Successfully parsing USB storage information.");
 	return usb_dev;
 }
 
 void create_udev_rule(USB_DEV * usb_dev, char ** rule_str)
 {
+	logger("DEBUG", APP_NAME, "Start to create rule string for connected USB Storage.");
 	char rule_line[512] = DEFAULT_UDEV_RULE;
 	char idVendor[64], idProduct[64], serial[64], manufacturer[64], product[64];
 	
@@ -85,7 +86,9 @@ void create_udev_rule(USB_DEV * usb_dev, char ** rule_str)
 
 	strncpy(*rule_str, rule_line, strlen(rule_line));
 	(*rule_str)[strlen(rule_line)] = '\0';
-	logger("INFO", APP_NAME, "Successfully create draft rule string for newly connected USB storage.\n");
+
+	logger("DEBUG", APP_NAME, *rule_str);
+	logger("INFO", APP_NAME, "Successfully create draft rule string for connected USB storage.");
 }
 
 int register_td(char ** rule_str, USB_DEV * usb_dev, int blacklist)
@@ -106,8 +109,7 @@ int register_td(char ** rule_str, USB_DEV * usb_dev, int blacklist)
 		usb_dev->manufacturer,
 		usb_dev->product,
 		(strlen(usb_dev->serial) == 0) ? "Unknown": usb_dev->serial);
-	logger("INFO", APP_NAME, tmp);
-	
+	logger("DEBUG", APP_NAME, tmp);
 	
 	FILE * rule_file = fopen((blacklist == 1) ? CUSTOM_BLACKLIST_RULE : CUSTOM_WHITELIST_RULE, "a");
 	if (rule_file == NULL)
@@ -150,7 +152,7 @@ int remove_td(char ** rule_str, USB_DEV * usb_dev, int blacklist)
 		usb_dev->manufacturer,
 		usb_dev->product,
 		(strlen(usb_dev->serial) == 0) ? "Unknown": usb_dev->serial);
-	logger("INFO", APP_NAME, tmp);
+	logger("DEBUG", APP_NAME, tmp);
 
 	char buffer[512];
 	char * rule_file_name = (blacklist == 0) ? CUSTOM_WHITELIST_RULE : CUSTOM_BLACKLIST_RULE ;
@@ -198,7 +200,7 @@ int search_td(char ** rule_str, USB_DEV * usb_dev)
 		usb_dev->manufacturer,
 		usb_dev->product,
 		(strlen(usb_dev->serial) == 0) ? "Unknown": usb_dev->serial);
-	logger("INFO", APP_NAME, tmp);
+	logger("DEBUG", APP_NAME, tmp);
 
 	int match_flag = 0;
 	char buffer[512];
@@ -344,6 +346,15 @@ void reload_and_trigger()
 int main (int argc, char * argv[])
 {
 	int not_filtered = -1;
+	char command[128] = "";
+
+	for (int i = 0; i < argc ; i++)
+	{
+		strncat(command, *(argv + i), strlen(*(argv + i)));
+		strncat(command, " ", 2);
+	}
+	command[strlen(command)] = '\0';
+	logger("DEBUG", APP_NAME, command);
 
 	if (argc < 4)
 	{

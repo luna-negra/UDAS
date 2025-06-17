@@ -357,6 +357,14 @@ void * work_thread(void * arg)
 
             // fprint the device info.
             usb_info = get_usb_dev(device, &desc);
+
+            // if the usb connection is unstable.
+            if (usb_info.result == 0)
+            {
+                logger("WARNING", APP_NAME, "Has a problem during reading USB Storage information.");
+                continue;
+            }
+
             usb_info.device_class = infc->altsetting->bInterfaceClass;
 
             // convert to thread: 2025.06.03

@@ -23,7 +23,7 @@ from udas.udas_custom_widget import (CustomComboboxWithButton,
                                      custom_labels_kv,
                                      custom_separate_line,
                                      custom_splitter_fixed,
-                                     custom_widget_for_layout,)
+                                     custom_widget_for_layout, QMessageBox, )
 
 
 COLOR_SEPARATE_LINE: str = "#333"
@@ -342,17 +342,25 @@ class MainWindow(QMainWindow):
             # MessageBox
 
         elif exit_code == 1:
-            print("[ERROR] COMMAND ERROR")
-            print(exit_code)
-            # MessageBox
+            msg_box = QMessageBox()
+            msg_box.setText("[ERROR] Wrong command format.")
+            msg_box.setIcon(QMessageBox.Critical)
+
+            msg_box.setStandardButtons(QMessageBox.Abort)
+            msg_box.setDefaultButton(QMessageBox.Abort)
+            msg_box.exec()
 
         elif exit_code == 127:
-            print("[ERROR] NO COMMAND EXIST")
-            # MessageBox
+            msg_box = QMessageBox()
+            msg_box.setText("[ERROR] Can not use UDAS command in your machine.")
+            msg_box.setIcon(QMessageBox.Critical)
+
+            msg_box.setStandardButtons(QMessageBox.Abort)
+            msg_box.setDefaultButton(QMessageBox.Abort)
+            msg_box.exec()
 
         else:
-            print(exit_code)
-            print(cmd_result.stdout)
+            pass
 
         return None
 

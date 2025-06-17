@@ -3,7 +3,8 @@ from udas.udas_pytool import (sys,
                               QMessageBox,
                               exit_process,
                               centralise_fixed,)
-from udas.udas_custom_widget import CustomDialogPasswordInput
+from udas.udas_custom_widget import (ConfigIni,
+                                     CustomDialogPasswordInput,)
 
 
 def get_usb_info(options: tuple) -> dict:
@@ -33,18 +34,32 @@ class AlertNewUSB(QMessageBox):
         if len(options) == 1:
             self.setText("[WARNING] Invalid Execute Command.\n")
             self.setIcon(QMessageBox.Warning)
+            return
 
-        else:
-            # get information from cmd options
-            usb_info: dict = get_usb_info(options)
+        # get information from cmd options
+        usb_info: dict = get_usb_info(options)
 
-            # set question MessageBox
-            self.setText(usb_info.get("info_label"))
-            self.setIcon(QMessageBox.Question)
+        if usb_info.get("product") is None or usb_info.get("product") == "" or usb_info.get("manufacturer") is None or usb_info.get("manufacturer") == "":
+            self.setText("[WARNING] Can not read USB Storage information.\n")
+            self.setIcon(QMessageBox.Warning)
+            return
 
-            # button setting
-            self.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-            self.setDefaultButton(QMessageBox.No)
+        # apply allow_ns
+        if ConfigIni().get_allow_ns() == 1 and usb_info.get("serial") == "Unknown":
+            self.setText("[WARNING]\n Connected USB Storage does not have serial number.")
+            self.setIcon(QMessageBox.Critical)
+            self.setStandardButtons(QMessageBox.Abort)
+            self.setDefaultButton(QMessageBox.Abort)
+            return None
+
+        # set question MessageBox
+        self.setText(usb_info.get("info_label"))
+        self.setIcon(QMessageBox.Question)
+
+        # button setting
+        self.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        self.setDefaultButton(QMessageBox.No)
+        return None
 
 
 if __name__ == "__main__":

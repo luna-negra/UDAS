@@ -475,17 +475,19 @@ class CustomDialogPasswordChange(QDialog):
 
         elif not self.__is_new_password_match():
             self.__label_info.setStyleSheet("color:red;")
-            self.__label_info.setText("New Password is not Match. Please retype again.")
+            self.__label_info.setText("New Password is not Match. Please check new password again.")
 
         else:
             cmd_result = change_password(old_pw=encrypt_str(string=self.__line_input_old_pw.text()),
                                          new_pw=encrypt_str(string=self.__line_input_new_pw.text()))
-            if cmd_result.returncode != 0:
-                self.__label_info.setStyleSheet("color:red;")
-                self.__label_info.setText("Current Password is not match. Please retype again.")
-            else:
+            if cmd_result.returncode == 0:
                 self.accept()
 
+            else:
+                self.__label_info.setStyleSheet("color:orange;")
+                self.__label_info.setText("Fail to update UDAS password. Please check old password again.")
+
+        return None
 
     def __is_new_password_match(self) -> bool:
         return self.__line_input_new_pw.text() == self.__line_input_new_repw.text()

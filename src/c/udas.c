@@ -286,7 +286,7 @@ int set_password(FILE * config_file, FILE * config_file_tmp, char * old_password
 
 	// udas set passwd --old-password=pw --new-password=newpw
 	int result = EXIT_FAILURE;
-		
+	
 	char * token_old_pw = strtok(old_password, "=");
 	token_old_pw = strtok(NULL, "=");
 	sprintf(old_password, "auth_str=%s\n", token_old_pw);
@@ -394,7 +394,7 @@ void reload_and_trigger()
 int main (int argc, char * argv[])
 {
 	int not_filtered = -1;
-	char command[128] = "";
+	char command[512] = "";
 
 	for (int i = 0; i < argc ; i++)
 	{

@@ -1,7 +1,7 @@
 *
 !.gitignore
 !src/c/udas.*
-!src/c/udas_common.h
+!src/c/udas_common.*
 !src/c/udas_detector.*
 !src/python/
 !src/python/udas/

@@ -375,7 +375,7 @@ class MainWindow(QMainWindow):
         button_width: int = 80
         combobox_width: int = 120
         height: int = 30
-        item_list: list = ["CRITICAL", "WARNING", "INFO", "DEBUG"]
+        item_list: list = ["ERROR", "WARNING", "INFO", "DEBUG"]
 
         label_settings_preamble = custom_label(text="<b>UDAS Settings</b>",
                                                width=total_width,

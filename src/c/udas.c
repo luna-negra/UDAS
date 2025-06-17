@@ -179,11 +179,15 @@ int remove_td(char ** rule_str, USB_DEV * usb_dev, int blacklist)
 		if (strcmp(buffer, *rule_str) != 0)	fputs(buffer, tmp_file);
 	}
 
+	fclose(rule_file);
+	fclose(tmp_file);
+	
 	remove(rule_file_name);
 	rename(rule_file_tmp_name, rule_file_name);
 
-	fclose(rule_file);
-	fclose(tmp_file);
+	(blacklist == 1) ? 
+	logger("INFO", APP_NAME, "Success to remove registered blacklist USB Storage "): 
+	logger("INFO", APP_NAME, "Success to remove registered whitelist USB Storage ");
 
 	return EXIT_SUCCESS;
 }
@@ -237,7 +241,7 @@ int search_td(char ** rule_str, USB_DEV * usb_dev)
 		}
 	}
 
-	if (match_flag == 0) logger("INFO", APP_NAME, "Device is not registered in whitelist and blacklist."); 
+	if (match_flag == 0) logger("INFO", APP_NAME, "Device is not registered in neither whitelist nor blacklist."); 
 	else if (match_flag == 1) logger("INFO", APP_NAME, "Device is registered as whitelist.");
 	else if (match_flag == -1) logger("INFO", APP_NAME, "Device is registered as blacklist.");
 	return EXIT_SUCCESS;
@@ -245,6 +249,8 @@ int search_td(char ** rule_str, USB_DEV * usb_dev)
 
 int set_loglevel(FILE * config_file, FILE * config_file_tmp, char * loglevel)
 {
+	logger("INFO", APP_NAME, "Start updating log level.");
+
 	//Loglevel: Debug, Info, Warning, Critical
 	int result = EXIT_FAILURE;
 
@@ -261,7 +267,7 @@ int set_loglevel(FILE * config_file, FILE * config_file_tmp, char * loglevel)
 				result = EXIT_SUCCESS;
 
 				char log[256];
-				snprintf(log, sizeof(log), "Successfully update log level to '%s'", loglevel);
+				snprintf(log, sizeof(log), "Succeed to update log level to '%s'", loglevel);
 				logger("INFO", APP_NAME, log);
 				continue;
 			}
@@ -270,11 +276,14 @@ int set_loglevel(FILE * config_file, FILE * config_file_tmp, char * loglevel)
 		}
 	}
 	
+	logger("WARNING", APP_NAME, "Failed to update log level.");
 	return result;
 }
 
 int set_password(FILE * config_file, FILE * config_file_tmp, char * old_password, char * new_password)
 {
+	logger("INFO", APP_NAME, "Start updating UDAS Password.");
+
 	// udas set passwd --old-password=pw --new-password=newpw
 	int result = EXIT_FAILURE;
 		
@@ -295,18 +304,21 @@ int set_password(FILE * config_file, FILE * config_file_tmp, char * old_password
 			result = EXIT_SUCCESS;
 
 			char log[256];
-			snprintf(log, sizeof(log), "Successfully update UDAS Password.");
+			snprintf(log, sizeof(log), "Succeed to update UDAS password.");
 			logger("INFO", APP_NAME, log);
 			continue;
 		}
 		fputs(buffer, config_file_tmp);
 	}
 
+	logger("WARNING", APP_NAME, "Failed to update UDAS password.");
 	return result;
 }
 
 int set_blacklist(FILE * config_file, FILE * config_file_tmp, char * blacklist)
 {
+	logger("INFO", APP_NAME, "Start updating blacklist setting.");
+
 	/* udas set blacklist on , udas set blacklist off */
 	int result = EXIT_FAILURE;
 
@@ -323,7 +335,7 @@ int set_blacklist(FILE * config_file, FILE * config_file_tmp, char * blacklist)
 				result = EXIT_SUCCESS;
 
 				char log[256];
-				snprintf(log, sizeof(log), "Successfully update blacklist setting '{%s}'.", blacklist);
+				snprintf(log, sizeof(log), "Succeed to update blacklist setting '{%s}'.", blacklist);
 				logger("INFO", APP_NAME, log);
 				continue;
 			}
@@ -332,6 +344,7 @@ int set_blacklist(FILE * config_file, FILE * config_file_tmp, char * blacklist)
 		}
 	}
 
+	logger("WARNING", APP_NAME, "Failed to update blacklist setting.");
 	return result;
 }
 

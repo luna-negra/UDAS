@@ -1,9 +1,7 @@
 #ifndef UDAS_H
 #define UDAS_H
 
-    #include <stdio.h>
-    #include <stdlib.h>
-    #include <string.h>
+    #include "./udas_common.h"
 
     typedef struct  
     {   

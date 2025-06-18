@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Any
 from .udas_pytool import (Qt,
                          QWidget,
@@ -13,11 +14,16 @@ from .udas_pytool import (Qt,
                          QPushButton,
                          QTableWidget,
                          QTableWidgetItem,
+                         QTextEdit,
                          QAbstractItemView,
                          ConfigIni,
-                         exit_process,
-                         remove_registered_usb_info,)
+                         change_password,
+                         get_logs,
+                         encrypt_str,
+                         exit_process,)
 
+
+COLOR_SEPARATE_LINE: str = "#333"
 
 def custom_box_layout(children: list,
                       vertical: bool = True,
@@ -111,7 +117,7 @@ def custom_push_button(text: str,
                        style: str | None = None,
                        connect: Any = None,
                        status_tip: str | None = None,
-                       default: bool = False,
+                       default: bool | None = None,
                        enable: bool = True,) -> QPushButton:
     b = QPushButton(text)
     b.setFixedSize(width, height)
@@ -119,7 +125,8 @@ def custom_push_button(text: str,
     if connect is not None:
         b.clicked.connect(connect)
     b.setStatusTip(status_tip)
-    b.setDefault(default)
+    if default is not None:
+        b.setDefault(default)
     b.setEnabled(enable)
     return b
 
@@ -152,6 +159,7 @@ def custom_table(total_width: int,
                  cell_align: str | None = "center",
                  is_enable: bool = False,
                  is_select_columns: bool = True,
+                 is_single_selection: bool = True,
                  is_vertical_header: bool = False,
                  is_resize_row_to_contents: bool = False,
                  is_resize_column_to_contents: bool = False,) -> QTableWidget:
@@ -175,7 +183,11 @@ def custom_table(total_width: int,
 
     # set select behavior
     if is_select_columns:
-        t.setSelectionBehavior(QTableWidget.SelectRows)
+        t.setSelectionBehavior(QAbstractItemView.SelectRows)
+
+    # set single selection
+    if is_single_selection:
+        t.setSelectionMode(QAbstractItemView.SingleSelection)
 
     # set visible on vertical header
     t.verticalHeader().setVisible(is_vertical_header)
@@ -203,6 +215,20 @@ def custom_table(total_width: int,
     # stretch last column.
     t.horizontalHeader().setStretchLastSection(True)
     return t
+
+def custom_text_edit(width: int,
+                     height: int,
+                     style: str | None = None,
+                     enable: bool = False,
+                     text: str = "",
+                     ) -> QTextEdit:
+    te = QTextEdit()
+    te.setFixedSize(width, height)
+    te.setStyleSheet(style)
+    te.setText(text)
+    if not enable:
+        te.setTextInteractionFlags(Qt.NoTextInteraction)
+    return te
 
 def custom_widget_for_layout(width: int,
                              height: int,
@@ -290,38 +316,205 @@ def custom_label_button_for_control(total_width: int,
     widget.setLayout(layout)
     return widget
 
-def custom_label_combobox_for_control(total_width: int,
-                                      height: int,
-                                      ratio: float,
-                                      info_text: str,
-                                      combobox_width: int,
-                                      combobox_items: list,
-                                      default_item: str,
-                                      style: str | None = None,
-                                      info_style: str | None = None,
-                                      combobox_style: str | None = None,
-                                      status_tip: str | None = None,
-                                      align: str = "center",
-                                      spacing: int = 10,) -> QWidget:
 
-    label_info = custom_label(text=info_text,
-                              width=int(total_width * ratio),
-                              height=height,
-                              style=info_style,)
-    combobox = custom_combobox(width=combobox_width,
-                               height=height,
-                               style=combobox_style,
-                               items_list=combobox_items,
-                               default_item=default_item,
-                               status_tip=status_tip,)
-    layout = custom_box_layout(children=[label_info, combobox],
-                               vertical=False,
-                               align=align,
-                               spacing=spacing)
+class CustomComboboxWithButton(QWidget):
+    def __init__(self, **kwargs):
+        super().__init__()
 
-    widget = custom_widget_for_layout(width=total_width, height=height, style=style)
-    widget.setLayout(layout)
-    return widget
+        self.__total_width: int = kwargs.get("total_width")
+        self.__total_height: int = kwargs.get("total_height")
+        self.__ratio: float = kwargs.get("ratio", 0.4)
+
+        self.__label_text: str = kwargs.get("label_text")
+        self.__label_style: str | None = kwargs.get("label_style", None)
+
+        self.__combobox_width: int = kwargs.get("combobox_width")
+        self.__combobox_items: list = kwargs.get("combobox_items")
+        self.__combobox_default: str = kwargs.get("combobox_default")
+        self.__combobox_style: str | None = kwargs.get("combobox_style", None)
+
+        self.__button_width: int = kwargs.get("button_width")
+        self.__button_text: str = kwargs.get("button_text")
+        self.__button_status_tip: str = kwargs.get("button_status_tip", "")
+        self.__button_style: str | None = kwargs.get("button_style", None)
+        self.__button_connect: Any = kwargs.get("button_connect")
+
+        # init_ui
+        self.__init_ui()
+
+    def __init_ui(self):
+        self.setFixedSize(self.__total_width, self.__total_height)
+
+        label = custom_label(text=self.__label_text,
+                             width=int(self.__total_width * self.__ratio),
+                             height=self.__total_height,
+                             style=self.__label_style)
+
+        self.combobox = custom_combobox(width=self.__combobox_width,
+                                        height=self.__total_height,
+                                        items_list=self.__combobox_items,
+                                        default_item=self.__combobox_default,
+                                        style=self.__combobox_style)
+
+        self.__button = custom_push_button(text=self.__button_text,
+                                         width=self.__button_width,
+                                         height=self.__total_height,
+                                         status_tip=self.__button_status_tip,
+                                         style=self.__button_style,
+                                         connect=self.__button_connect,
+                                         enable=False)
+
+        self.__combo_default_index = self.combobox.currentIndex()
+        self.combobox.currentIndexChanged.connect(self.__on_change_combobox)
+
+        layout = custom_box_layout(children=[label, self.combobox, self.__button], vertical=False,)
+        self.setLayout(layout)
+        return None
+
+    def __on_change_combobox(self):
+        self.__button.setEnabled(True) if self.combobox.currentIndex() != self.__combo_default_index \
+            else self.__button.setEnabled(False)
+        return None
+
+
+class CustomDialogPasswordChange(QDialog):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.__margin: int = 20
+        self.__title: str = kwargs.get("title")
+        self.__total_width: int = kwargs.get("total_width") - self.__margin * 2
+        self.__total_height: int = kwargs.get("total_height")
+        self.__ratio: float = kwargs.get("ratio")
+        self.__style: str = kwargs.get("style", "")
+
+
+        self.__label_text: str = kwargs.get("label_text")
+        self.__label_width: int = kwargs.get("label_width")
+        self.__label_height: int = kwargs.get("label_height")
+        self.__label_style: str = kwargs.get("label_style", "")
+
+        self.__line_input_style: str = kwargs.get("line_input_style", "")
+
+        self.__button_width: int = kwargs.get("button_width")
+        self.__button_style: str = kwargs.get("button_style", "")
+        self.__init_ui()
+
+    def __init_ui(self):
+        # set size
+        label_width: int = int(self.__total_width * self.__ratio)
+        self.setWindowTitle(self.__title)
+        self.setFixedSize(self.__total_width, self.__total_height)
+
+        # set buttons
+        button_enter = custom_push_button(text="Change",
+                                          width=self.__button_width,
+                                          height=self.__label_height,
+                                          default=True)
+
+        button_enter.clicked.connect(self.__accept)
+
+        layout_buttons = custom_box_layout(children=[button_enter],
+                                           vertical=False,
+                                           stretch=True,
+                                           align="center",
+                                           margin_l=125)
+
+        # set layout for old password
+        label_old_pw = custom_label(text="・Current Password",
+                                    width=label_width,
+                                    height=self.__label_height,
+                                    style=self.__label_style)
+
+        self.__line_input_old_pw = custom_line_edit(width=self.__label_width,
+                                                  height=self.__label_height,
+                                                  style=self.__line_input_style,
+                                                  tooltip="UDAS Current Password",
+                                                  status_tip="Input Current UDAS Password...",
+                                                  echo_mode=True)
+        layout_old_pw = custom_box_layout(children=[label_old_pw, self.__line_input_old_pw],
+                                          vertical=False)
+
+
+        # set layout for new password
+        label_new_pw = custom_label(text="・New Password",
+                                    width=label_width,
+                                    height=self.__label_height,
+                                    style=self.__label_style)
+        self.__line_input_new_pw = custom_line_edit(width=self.__label_width,
+                                                  height=self.__label_height,
+                                                  style=self.__line_input_style,
+                                                  tooltip="New UDAS Password",
+                                                  status_tip="Input New UDAS Password...",
+                                                  echo_mode=True,)
+        layout_new_pw = custom_box_layout(children=[label_new_pw, self.__line_input_new_pw],
+                                          vertical=False)
+
+        # set layout for new password retype
+        label_new_repw = custom_label(text="・New Password Retype",
+                                    width=label_width,
+                                    height=self.__label_height,
+                                    style=self.__label_style)
+        self.__line_input_new_repw = custom_line_edit(width=self.__label_width,
+                                                    height=self.__label_height,
+                                                    style=self.__line_input_style,
+                                                    tooltip="Retype New UDAS Password",
+                                                    status_tip="Retype New UDAS Password...",
+                                                    echo_mode=True)
+        layout_new_repw = custom_box_layout(children=[label_new_repw, self.__line_input_new_repw],
+                                            vertical=False)
+
+        # set info label
+        self.__label_info = custom_label(text="",
+                                  width=self.__total_width,
+                                  height=self.__label_height,
+                                  style=self.__label_style)
+
+        # set layout and apply to dialog
+        widget_layout_buttons = custom_widget_for_layout(width=self.__total_width, height=self.__label_height,)
+        widget_layout_buttons.setLayout(layout_buttons)
+        layout = custom_box_layout(children=[layout_old_pw,
+                                             layout_new_pw,
+                                             layout_new_repw,
+                                             self.__label_info,
+                                             widget_layout_buttons],
+                                   margin_l=self.__margin,
+                                   margin_t=self.__margin,
+                                   margin_b=self.__margin,
+                                   margin_r=self.__margin)
+        self.setLayout(layout)
+        return None
+
+    def __accept(self):
+        if self.__line_input_old_pw.text() == "":
+            self.__label_info.setStyleSheet("color:orange;")
+            self.__label_info.setText("Please input your old UDAS password.")
+
+        elif self.__line_input_new_pw.text() == "":
+            self.__label_info.setStyleSheet("color:orange;")
+            self.__label_info.setText("Please input your new UDAS password.")
+
+        elif self.__line_input_new_repw.text() == "":
+            self.__label_info.setStyleSheet("color:orange;")
+            self.__label_info.setText("Please input your new UDAS password at last input.")
+
+        elif not self.__is_new_password_match():
+            self.__label_info.setStyleSheet("color:red;")
+            self.__label_info.setText("New Password is not Match. Please check new password again.")
+
+        else:
+            cmd_result = change_password(old_pw=encrypt_str(string=self.__line_input_old_pw.text()),
+                                         new_pw=encrypt_str(string=self.__line_input_new_pw.text()))
+            if cmd_result.returncode == 0:
+                self.accept()
+
+            else:
+                self.__label_info.setStyleSheet("color:orange;")
+                self.__label_info.setText("Fail to update UDAS password. Please check old password again.")
+
+        return None
+
+    def __is_new_password_match(self) -> bool:
+        return self.__line_input_new_pw.text() == self.__line_input_new_repw.text()
 
 
 class CustomDialogPasswordInput(QDialog):
@@ -367,7 +560,7 @@ class CustomDialogPasswordInput(QDialog):
                                         width=self.__btn_width,
                                         height=self.__btn_height,)
 
-        btn_enter = custom_push_button(text="Override",
+        btn_enter = custom_push_button(text="OK",
                                        width=self.__btn_width,
                                        height=self.__btn_height,
                                        default=True)
@@ -376,7 +569,7 @@ class CustomDialogPasswordInput(QDialog):
                                          width=self.__label_width,
                                          height=self.__label_height,)
 
-        btn_cancel.clicked.connect(lambda: self.reject())
+        btn_cancel.clicked.connect(self.reject)
         btn_enter.clicked.connect(self.__accept)
 
         layout_button = custom_box_layout(children=[btn_cancel, btn_enter],
@@ -398,17 +591,151 @@ class CustomDialogPasswordInput(QDialog):
         self.setLayout(layout_password)
 
     def __accept(self):
-        # 2025.06.07: require encryption.
-        input_password = self.line_input_password.text()
+        if self.line_input_password.text() == "":
+            self.label_result.setStyleSheet("color: orange; font-weight:500;")
+            self.label_result.setText("Please input your UDAS password.")
 
-        if input_password == self.__auth_str:
-            self.accept()
-        else:
-            self.label_result.setText("Not Authorized")
+        elif encrypt_str(string=self.line_input_password.text()) != self.__auth_str:
             self.label_result.setStyleSheet("color: red; font-weight:500;")
+            self.label_result.setText("Not Authorized")
+
+        else:
+            self.accept()
 
     def reject(self, exit_code: int=-1):
         exit_process(exit_code)
+
+
+class CustomLabelWithButton(QWidget):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.__total_width: int = kwargs.get("total_width")
+        self.__total_height: int = kwargs.get("height")
+        self.__ratio: float = kwargs.get("ratio", 0.5)
+
+        self.__label_width: int = int(self.__total_width * self.__ratio)
+        self.__label_text: str = kwargs.get("label_text")
+        self.__label_style: str | None = kwargs.get("label_style", None)
+
+        self.__button_width: int = kwargs.get("button_width")
+        self.__button_text: str = kwargs.get("button_text")
+        self.__button_style: str | None = kwargs.get("button_style", None)
+        self.__button_status_tip: str = kwargs.get("button_status_tip", "")
+        self.__button_default: bool = kwargs.get("button_default", False)
+        self.__button_enable: bool = kwargs.get("button_enable", True)
+        self.__button_connect: Any = kwargs.get("connect", None)
+
+        self.__init_ui()
+
+    def __init_ui(self):
+        self.setFixedSize(self.__total_width, self.__total_height)
+
+        label = custom_label(text=self.__label_text,
+                             width=self.__label_width,
+                             height=self.__total_height,
+                             style=self.__label_style)
+
+        button = custom_push_button(text=self.__button_text,
+                                         width=self.__button_width,
+                                         height = self.__total_height,
+                                         style=self.__button_style,
+                                         default=self.__button_default,
+                                         status_tip=self.__button_status_tip,
+                                         enable=self.__button_enable,
+                                         connect=self.__button_connect,)
+
+        layout = custom_box_layout(children=[label, button], vertical=False)
+        self.setLayout(layout)
+        return None
+
+
+class CustomLogViewer(QWidget):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.__total_width: int = kwargs.get("total_width")
+        self.__total_height: int = kwargs.get("total_height")
+
+        self.__text_edit_height: int = kwargs.get("text_edit_height")
+        self.__text_edit_style: str | None = kwargs.get("text_edit_style", None)
+        self.__text_edit_enable: bool = kwargs.get("text_edit_enable", False)
+
+        self.__button_text_list: list = ["ERROR", "WARNING", "INFO", "DEBUG"]
+        self.__button_width: int = int((self.__total_width / len(self.__button_text_list)) - 10)
+        self.__button_height: int = 30
+        self.__button_style: str | None = kwargs.get("button_style", None)
+
+        self.__init_ui()
+
+
+    def __init_ui(self):
+        # create text_editor to show logs.
+        self.__text_editor = custom_text_edit(width=self.__total_width,
+                                              height=self.__text_edit_height,
+                                              style=self.__text_edit_style,
+                                              enable=self.__text_edit_enable)
+
+        # print out all logs.
+        self.__get_logs()
+
+        # create buttons for log level
+        button_list: list = []
+        for btn_text in self.__button_text_list:
+            button_list.append(custom_push_button(width=self.__button_width,
+                                                  height=self.__button_height,
+                                                  text=f"{btn_text}",
+                                                  style=self.__button_style,
+                                                  status_tip=f"Show {btn_text.lower()} logs...",
+                                                  connect=partial(self.__get_logs, btn_text)))
+
+        buttons_layout = custom_box_layout(children=button_list, vertical=False,)
+
+        # create layout
+        layout = custom_box_layout(children=[self.__text_editor,
+                                             custom_separate_line(color=COLOR_SEPARATE_LINE),
+                                             buttons_layout])
+        self.setLayout(layout)
+        return None
+
+    def __get_logs(self, grep: str | None = None) -> None:
+        logs = get_logs(grep=grep).stdout.decode("utf-8").replace(": [", ":\n[").replace("] ", "]\n")
+        self.__text_editor.setText(logs)
+        return None
+
+
+class CustomMessageBox(QMessageBox):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.__text = kwargs.get("msg_box_text")
+        self.__msg_box_type = kwargs.get("msg_box_type", "information")
+        self.__init_ui()
+
+    def __init_ui(self):
+        # set text for MessageBox
+        self.setText(self.__text)
+
+        # set icon for MessageBox
+        if self.__msg_box_type == "information":
+            self.setIcon(QMessageBox.Information)
+            self.setStandardButtons(QMessageBox.Ok)
+            self.setDefaultButton(QMessageBox.Ok)
+
+        elif self.__msg_box_type == "Warning":
+            self.setIcon(QMessageBox.Warning)
+            self.setStandardButtons(QMessageBox.Ok)
+            self.setDefaultButton(QMessageBox.Ok)
+
+        elif self.__msg_box_type == "Critical":
+            self.setIcon(QMessageBox.Critical)
+            self.setStandardButtons(QMessageBox.Abort)
+            self.setDefaultButton(QMessageBox.Abort)
+
+        elif self.__msg_box_type == "Question":
+            self.setIcon(QMessageBox.Question)
+            self.setStandardButtons(QMessageBox.No | QMessageBox.Yes)
+            self.setDefaultButton(QMessageBox.No)
+
+        return
+
 
 class CustomTableWithOneButton(QWidget):
     def __init__(self, **kwargs):
@@ -447,6 +774,8 @@ class CustomTableWithOneButton(QWidget):
         self.__init_ui()
 
     def __init_ui(self):
+        self.setFixedWidth(self.__total_width,)
+
         label = custom_label(text=self.__label_text,
                              width=self.__total_width,
                              height=self.__label_height,
@@ -465,7 +794,7 @@ class CustomTableWithOneButton(QWidget):
                                     is_resize_row_to_contents=self.__is_resize_row_to_contents,
                                     is_resize_column_to_contents=self.__is_resize_column_to_contents)
 
-        self.table.itemClicked.connect(lambda: self.__on_click_table_item())
+        self.table.itemClicked.connect(self.__on_click_table_item)
 
         self.__button = custom_push_button(text=self.__button_text,
                                            width=self.__button_width,
@@ -476,7 +805,7 @@ class CustomTableWithOneButton(QWidget):
                                            default=self.__button_default,
                                            status_tip=self.__button_status_tip)
 
-        self.__button.clicked.connect(lambda: self.__button_connect)
+        self.__button.clicked.connect(self.__button_connect)
 
         blank_label = custom_label(text="",
                                    width=int(self.__total_width * self.__ratio),

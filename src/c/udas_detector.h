@@ -11,11 +11,9 @@ EXIT_FAILURE: 1
     #include <libusb-1.0/libusb.h>
     #include <unistd.h>
     #include <pthread.h>
-    #include <stdio.h>
-    #include <stdlib.h>
-    #include <string.h>
     #include <sys/types.h>
     #include <sys/wait.h>
+    #include "./udas_common.h"
 
     #define Q_LEN 16
 

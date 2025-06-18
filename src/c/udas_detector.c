@@ -2,6 +2,8 @@
 #include "./udas_detector.h"
 
 
+char * APP_NAME = "UDAS_DETECTOR";
+
 libusb_device * dequeue(USBDEV ** usb_dev)
 {
     libusb_device * pop_data = (*usb_dev)->dev_list[(*usb_dev)->front];
@@ -23,7 +25,7 @@ void enqueue(libusb_device ** device, libusb_context ** ctx, USBDEV ** usb_dev)
 
     if ((*usb_dev)->front == ((*usb_dev)->rear + 1) % Q_LEN)
     {
-        fprintf(stdout, "[WARNING] Too many USB devices are connected simultaneously.\n");
+        logger("WARNING", APP_NAME, "Too many USB devices are connected simultaneously.");
         return;
     }
     
@@ -48,12 +50,12 @@ USB_INFO get_usb_dev(libusb_device * device, libusb_device_descriptor * desc)
     // check libusb status.
     if (r == LIBUSB_ERROR_ACCESS)
     {
-        fprintf(stderr, "[ERROR] Need root or sudo privilege to check USB device. Process will be terminated.\n");
+        logger("ERROR", APP_NAME, "Need root or sudo privilege to check USB device. Process will be terminated.");
         exit(-1);
     }
     else if (r != 0)
     {
-        fprintf(stdout, "[WARNING] Can not open libusb for new USB storage\n");
+        logger("WARNING", APP_NAME, "Can not open libusb for new USB storage.");
         return usb_info;
     }
 
@@ -70,6 +72,14 @@ USB_INFO get_usb_dev(libusb_device * device, libusb_device_descriptor * desc)
         "[INFO] USB Storage (%04x: %04x) is connected: Vendor - %s, Product: %s Serial: %s\n",
         usb_info.manufacture_id, usb_info.product_id, usb_info.manufacture, usb_info.product, usb_info.serialnum
     );
+
+    char tmp[256] = "";
+    snprintf(
+        tmp, 
+        sizeof(tmp), 
+        "USB Storage (%04x: %04x) is connected: Vendor - %s, Product: %s Serial: %s",
+        usb_info.manufacture_id, usb_info.product_id, usb_info.manufacture, usb_info.product, usb_info.serialnum);
+    logger("INFO", APP_NAME, tmp);
 
     // close libusb.
     libusb_close(handler);
@@ -99,9 +109,9 @@ int get_blacklist_setting()
 int register_device(USB_INFO * usb_info, int blacklist)
 {
     int cmd_result = -1;
-    char command[256];
-    char buffer[64];
-    char reg_opt[16];
+    char command[256] = "";
+    char buffer[64] = "";
+    char reg_opt[16] = "";
     (blacklist == 0) ? strncpy(reg_opt, "whitelist", sizeof("whitelist")) : strncpy(reg_opt, "blacklist", sizeof("blacklist")) ;
 
     // create command to register new usb storage device to udev rule file
@@ -115,7 +125,7 @@ int register_device(USB_INFO * usb_info, int blacklist)
             usb_info->manufacture,
             usb_info->product) < 0)
     {
-        fprintf(stderr, "[ERROR] Fail to create register command\n");
+        logger("ERROR", APP_NAME, "Fail to create register command.");
         return EXIT_FAILURE;
     }
 
@@ -123,8 +133,8 @@ int register_device(USB_INFO * usb_info, int blacklist)
     FILE * cmd = popen(command, "r");
     while (fgets(buffer, sizeof(buffer), cmd) != NULL)
     {
-        if ((strcmp(buffer, "success to register new whitelist USB storage.\n") == 0) || \
-            (strcmp(buffer, "success to register blacklist device.\n"))) return EXIT_SUCCESS;
+        if ((strstr(buffer, "success to register new whitelist USB storage.") != NULL) || \
+            (strstr(buffer, "success to register blacklist device.") != NULL)) return EXIT_SUCCESS;
     }
     // close pipe and remove file pointre.
     pclose(cmd);
@@ -134,8 +144,8 @@ int register_device(USB_INFO * usb_info, int blacklist)
 int search_device(USB_INFO * usb_info)
 {
     int cmd_result = 0;
-    char command[256];
-    char return_print[64];
+    char command[256] = "";
+    char return_print[64] = "";
 
     // create command to register new usb storage device to udev rule file
     if (snprintf(command, 
@@ -147,7 +157,7 @@ int search_device(USB_INFO * usb_info)
             usb_info->manufacture,
             usb_info->product) < 0)
     {
-        fprintf(stderr, "[ERROR] Fail to create UDAS command\n");
+        logger("ERROR", APP_NAME, "Fail to create UDAS command.");
         return EXIT_FAILURE;
     }
 
@@ -155,15 +165,15 @@ int search_device(USB_INFO * usb_info)
     FILE * cmd = popen(command, "r");
     while (fgets(return_print, sizeof(return_print), cmd) != NULL)
     {
-        if (strncmp(return_print, "[INFO] Device is registered as whitelist.\n", strlen("[INFO] Device is registered as whitelist.\n")) == 0)
+        if (strstr(return_print, "Device is registered as whitelist.") != NULL)
         {
             cmd_result = 1;
             break;
         }
-        else if (strncmp(return_print, "[INFO] Device is registered as blacklist.\n", strlen("[INFO] Device is registered as blacklist.\n")) == 0)
+        else if (strstr(return_print, "Device is registered as blacklist.") != NULL)
         {
-
             cmd_result = -1;
+            break;
         }
     }
 
@@ -172,11 +182,11 @@ int search_device(USB_INFO * usb_info)
     
     if (cmd_result == 0)
     {
-        fprintf(stdout, "[INFO] Not a registered USB storage\n");
+        logger("INFO", APP_NAME, "Not a registered USB storage.");
         return EXIT_SUCCESS;
     }
-    else if (cmd_result != 1) fprintf(stdout, "[INFO] Already registered USB storage as whitelist.\n");
-    else if (cmd_result != -1) fprintf(stdout, "[INFO] Already registered USB storage as blacklist.\n");
+    else if (cmd_result == 1) logger("INFO", APP_NAME, "Already registered USB storage as whitelist.");
+    else if (cmd_result == -1) logger("INFO", APP_NAME, "Already registered USB storage as blacklist.");
     return EXIT_FAILURE;
 }
 
@@ -184,7 +194,7 @@ int is_udas_alert_run(USB_INFO * usb_info)
 {
     int line = 0;
     char command[256] = "ps -aux | grep udas_alert ";
-    char option_idVendor[64], option_idproduct[64], option_serial[64], buffer[512];
+    char option_idVendor[64] = "", option_idproduct[64] = "", option_serial[64] = "", buffer[512] = "";
 
     snprintf(option_idVendor, sizeof(option_idVendor), "| grep %04x ", usb_info->manufacture_id);
     snprintf(option_idproduct, sizeof(option_idproduct), "| grep %04x ", usb_info->product_id);
@@ -216,23 +226,23 @@ void * call_gui_alert_thread(USB_INFO * usb_info)
     // check duplicate execution for udas_alert
     if (is_udas_alert_run(usb_info) != EXIT_SUCCESS)
     {
-        fprintf(stdout, "[WARNING] Process for the same USB storage is already Running.\n");
+        logger("WARNING", APP_NAME, "Process for the same USB storage is already Running.");
         return NULL;
     }
 
-    fprintf(stdout, "[INFO] Start calling subprocess for udas_alert.\n");
+    logger("INFO", APP_NAME, "Start calling subprocess for udas_alert.");
 
     // create child process for udas_alert
     pid_t child_proc = fork();
     if (child_proc == -1)
     {
-        fprintf(stderr, "[ERROR] Fail to create subprocess\n");
+        logger("ERROR", APP_NAME, "Fail to create subprocess.");
         return NULL;
     }
 
     // child process for udas_alert
     char idVendor[64], idProduct[64], serial[64], manufacturer[64], product[64];
-    fprintf(stdout, "[INFO] (udas_alert) Asking about new USB storage...\n");
+    logger("INFO", APP_NAME, "Asking about new USB storage...");
     snprintf(idVendor, sizeof(idVendor), "--idVendor=%04x", usb_info->manufacture_id);
     snprintf(idProduct, sizeof(idProduct), "--idProduct=%04x", usb_info->product_id);
     snprintf(serial, sizeof(serial), "--serial=%s", usb_info->serialnum);
@@ -260,24 +270,24 @@ void * call_gui_alert_thread(USB_INFO * usb_info)
             if (exit_code == 0)
             {
                 (register_device(usb_info, 0) == EXIT_SUCCESS) ?
-                fprintf(stdout, "[INFO] Success to register new USB storage as whitelist.\n"):
-                fprintf(stderr, "[ERROR] Fail to register new USB storage as whitelist.\n");
+                logger("INFO", APP_NAME, "Success to register new USB storage as whitelist."):
+                logger("ERROR", APP_NAME, "Fail to register new USB storage as whitelist.");
             }
-            else if (exit_code == 253) fprintf(stderr, "[ERROR] Config file is not exist.\n");
-            else if (exit_code == 254) fprintf(stderr, "[ERROR] Can not find the udas_alert.\n");
+            else if (exit_code == 253) logger("ERROR", APP_NAME, "Config file is not exist.");
+            else if (exit_code == 254) logger("ERROR", APP_NAME, "Can not find the udas_alert."); 
             else 
             {
                 int blacklist = get_blacklist_setting();                
-                if (blacklist == 0) fprintf(stderr, "[INFO] New USB storage is not registered as whitelist.\n");
+                if (blacklist == 0) logger("INFO", APP_NAME, "New USB storage is not registered as whitelist.");
                 else
                 {
                     (register_device(usb_info, 1) == EXIT_SUCCESS) ?
-                    fprintf(stdout, "[INFO] New USB storage is registered as blacklist.\n"):
-                    fprintf(stderr, "[ERROR] Fail to register new USB storage as blacklist.\n");
+                    logger("INFO", APP_NAME, "New USB storage is registered as blacklist."):
+                    logger("ERROR", APP_NAME, "Fail to register new USB storage as blacklist.");
                 }                
             }
         }
-        else if (WIFSIGNALED(status)) fprintf(stderr, "[ERROR] udas_alert is terminated by signal.\n");
+        else if (WIFSIGNALED(status)) logger("ERROR", APP_NAME, "udas_alert is terminated by signal.");
     }
     return NULL;
 }
@@ -300,7 +310,7 @@ void * work_thread(void * arg)
             // read descriptor or USB device
             if (libusb_get_device_descriptor(device, &desc) != EXIT_SUCCESS)
             {
-                fprintf(stdout, "[WARNING] Fail to read descriptor of USB Device.\n");
+                logger("WARNING", APP_NAME, "Fail to read descriptor of USB Device.");
                 continue;
             }
             
@@ -309,7 +319,7 @@ void * work_thread(void * arg)
             {
                 if (libusb_get_config_descriptor(device, 0, &cfg_desc) != EXIT_SUCCESS)
                 {
-                    fprintf(stdout, "[WARNING] Fail to read config descriptor of USB Device.\n");
+                    logger("WARNING", APP_NAME, "Fail to read config descriptor of USB Device.");
                     continue;
                 }
 
@@ -330,14 +340,31 @@ void * work_thread(void * arg)
 
             if (!is_mass_storage) 
             {
-                (infc != NULL) ?  
-                fprintf(stdout, "[INFO] Non Storage USB device (%04x) is connected.\n", infc->altsetting->bInterfaceClass): 
-                fprintf(stdout, "[INFO] Non Storage USB device (%04x) is connected.\n", desc.bDeviceClass);
+                if (infc != NULL) 
+                {
+                    char tmp[128];
+                    snprintf(tmp, sizeof(tmp), "Non Storage USB device (%04x) is connected.", infc->altsetting->bInterfaceClass);
+                    logger("INFO", APP_NAME, tmp);
+                }
+                else
+                {
+                    char tmp[128];
+                    snprintf(tmp, sizeof(tmp), "Non Storage USB device (%04x) is connected.", desc.bDeviceClass);
+                    logger("INFO", APP_NAME, tmp);
+                }
                 continue;
             }
 
             // fprint the device info.
             usb_info = get_usb_dev(device, &desc);
+
+            // if the usb connection is unstable.
+            if (usb_info.result == 0)
+            {
+                logger("WARNING", APP_NAME, "Has a problem during reading USB Storage information.");
+                continue;
+            }
+
             usb_info.device_class = infc->altsetting->bInterfaceClass;
 
             // convert to thread: 2025.06.03
@@ -349,7 +376,7 @@ void * work_thread(void * arg)
         else sleep(1);
     }
 
-    fprintf(stderr, "[ERROR] Thread for real time detecting was terminated.\n");
+    logger("ERROR", APP_NAME, "Thread for real time detecting was terminated.");
     exit(-1);
 }
 
@@ -377,7 +404,7 @@ int main(int argc, char * argv[])
     // initialize libusb context
     if (libusb_init(&ctx) != EXIT_SUCCESS) 
     {
-        fprintf(stderr, "[ERROR] Fail to initialize USB context.\n");
+        logger("ERROR", APP_NAME, "Fail to initialize USB context.");
         libusb_exit(ctx);
         return EXIT_FAILURE;
     }
@@ -385,8 +412,7 @@ int main(int argc, char * argv[])
     // check the platform support hotplug feature. (support: 1, not support: 0)
     if (libusb_has_capability(LIBUSB_CAP_HAS_HOTPLUG) == 0)
     {
-        fprintf(stderr, "[ERROR] Your libusb-1.0 libaray does not support hotplug.\n \
-            You have to install libusb up t version 1.0.26\n");
+        logger("ERROR", APP_NAME, "Your libusb-1.0 libaray does not support hotplug.\nYou have to install libusb up t version 1.0.26");
         libusb_exit(ctx);
         return EXIT_FAILURE;
     }
@@ -402,7 +428,7 @@ int main(int argc, char * argv[])
                                         usb_dev, 
                                         &ht_cb_handler) != EXIT_SUCCESS)
     {
-        fprintf(stderr, "[ERROR] Fail to register hotplug callback.\n");
+        logger("ERROR", APP_NAME, "Fail to register hotplug callback.");
         libusb_exit(ctx);
         return EXIT_FAILURE;
     }
@@ -410,12 +436,13 @@ int main(int argc, char * argv[])
     // define thread interlock and init
     if (pthread_mutex_init(&(usb_dev->lock), NULL) != EXIT_SUCCESS)
     {
-        fprintf(stderr, "[ERROR] Fail to create thread.\n");
+        logger("ERROR", APP_NAME, "Fail to create thread.");
         return EXIT_FAILURE;
     }
 
     // create and start thread
     pthread_create(&thread, NULL, work_thread, usb_dev);
+    logger("INFO", APP_NAME, "Start Listening USB port...");
     fprintf(stdout, "** LISTENING USB PORT **\n");
 
     while(1)

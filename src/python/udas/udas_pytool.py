@@ -1,6 +1,8 @@
+import subprocess
 import sys
 import configparser
 import re
+from hashlib import sha512
 from subprocess import (run,
                         PIPE,)
 from PySide6.QtCore import Qt
@@ -22,6 +24,7 @@ from PySide6.QtWidgets import (QApplication,
                                QListWidgetItem,
                                QTableWidget,
                                QTableWidgetItem,
+                               QTextEdit,
                                QCheckBox,
                                QComboBox,
                                QLineEdit,
@@ -48,6 +51,22 @@ def centralise_fixed(obj, width: int, height: int):
     obj.move(window_x, window_y)
     obj.setFixedSize(width, height)
     return None
+
+def change_blacklist(opt: str) -> subprocess.CompletedProcess:
+    command: str = f"pkexec udas set blacklist {opt}"
+    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
+
+def change_loglevel(log_level:str) -> subprocess.CompletedProcess:
+    command: str = f"pkexec udas set loglevel {log_level}"
+    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
+
+def change_ns_policy(opt: str) -> subprocess.CompletedProcess:
+    command: str = f"pkexec udas set ns_policy {opt}"
+    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
+
+def change_password(old_pw: str, new_pw:str) -> subprocess.CompletedProcess:
+    command: str = f"pkexec udas set passwd --old-password={old_pw} --new-password={new_pw}"
+    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
 
 def clear_layout(widget):
     old_layout = widget.layout()
@@ -82,8 +101,17 @@ def create_menubar(p_menu, menu_structure, widget):
         p_menu.addAction(sub_action)
     return None
 
+def encrypt_str(string:str) -> str:
+    return sha512(string=f"udas::{string}::2abu".encode("utf-8")).hexdigest()
+
 def exit_process(exit_code: int=0) -> None:
     sys.exit(exit_code)
+
+def get_logs(grep: str | None = None) -> subprocess.CompletedProcess:
+    command: str = "cat /var/log/udas/udas.log"
+    if grep is not None:
+        command += f" | grep {grep}"
+    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
 
 def get_rules(is_white: bool=True) -> list:
     result = []
@@ -92,10 +120,10 @@ def get_rules(is_white: bool=True) -> list:
 
     run_result = run(f"cat {file_path}", stdout=PIPE, stderr=PIPE, shell=True)
     if run_result.returncode == 0:
-        whitelist_regex = re.compile(RULE_REGEX)
+        regex = re.compile(RULE_REGEX)
 
         for line in run_result.stdout.decode(ENCODING).split("\n"):
-            regex_result = whitelist_regex.search(line)
+            regex_result = regex.search(line)
 
             if regex_result is None:
                 continue
@@ -134,8 +162,12 @@ def get_service_status() -> dict:
         ret_value["uptime"] = f"{tmp[-3]} {tmp[-2]}" if "h" in tmp[-3] else f"{tmp[-2]}"
     return ret_value
 
-def remove_registered_usb_info(id_vendor: str, id_product:str, serial:str, manufacturer:str, product:str, blacklist:bool=False):
-
+def remove_registered_usb_info(id_vendor: str,
+                               id_product:str,
+                               serial:str,
+                               manufacturer:str,
+                               product:str,
+                               blacklist:bool=False) -> subprocess.CompletedProcess:
     id_vendor = id_vendor if id_vendor != "N/A" else "Unknown"
     id_product = id_product if id_product != "N/A" else "Unknown"
     serial = serial if serial != "N/A" else "Unknown"
@@ -143,10 +175,8 @@ def remove_registered_usb_info(id_vendor: str, id_product:str, serial:str, manuf
     product = product if product != "N/A" else "Unknown"
     blacklist = "blacklist" if blacklist else "whitelist"
 
-    # change the command path: 2025.06.11
     command: str = f"pkexec udas td remove {blacklist} --idVendor={id_vendor} --idProduct={id_product} --serial={serial} --manufacturer={manufacturer} --product={product}"
-    test = run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
-    return test
+    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
 
 
 class ConfigIni:
@@ -162,14 +192,21 @@ class ConfigIni:
 
         else:
             self.__version = self.__config["Version"].get("version")
+            self.__ns_policy = self.__config["Management"].get("ns_policy")
             self.__auth_str = self.__config["Management"].get("auth_str")
             self.__blacklist = self.__config["Management"].get("blacklist")
             self.__lang = self.__config["Management"].get("lang")
-            self.__log_path = self.__config["Logging"].get("path")
             self.__log_level = self.__config["Logging"].get("level")
 
     def get_version(self):
         return self.__version
+
+    def get_ns_policy(self):
+        try:
+            value = int(self.__ns_policy)
+        except ValueError:
+            return 0
+        return value
 
     def get_auth_str(self):
         return self.__auth_str
@@ -184,36 +221,10 @@ class ConfigIni:
     def get_lang(self):
         return self.__lang
 
-    def get_log_path(self):
-        return self.__log_path
 
     def get_log_level(self):
         return self.__log_level
 
-    def set_auth_str(self, enc_auth_str: str):
-        self.__auth_str = enc_auth_str
-        return None
-
-    def set_blacklist(self, on_off: int):
-        self.__blacklist = str(on_off)
-        return None
-
-    def set_lang(self, lang: str):
-        self.__lang = lang
-        return None
-
-    def set_log_path(self, log_path: str):
-        self.__log_path = log_path
-        return None
-
-    def set_log_level(self, log_level: str):
-        self.__log_level = log_level
-        return None
-
-    def write(self):
-        with open(CONFIG_PATH, "w") as f:
-            self.__config.write(f)
-        return None
 
     def reject(self):
         sys.exit(-1)

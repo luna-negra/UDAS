@@ -2,9 +2,11 @@
 #include "./udas.h"
 
 
+char * APP_NAME = "UDAS";
+
 void manual()
 {
-	printf("\033[0;31m[WARNING] This command can not be run by user command.\033[0;0m\n");
+	logger("ERROR", APP_NAME, "command was executed in wrong way.");
 	return;
 }
 
@@ -46,12 +48,13 @@ USB_DEV get_dev_info(int argc, char * argv[])
 		}
 	}
 
-	fprintf(stdout, "[INFO] Successfully parsing USB storage information.\n");
+	logger("INFO", APP_NAME, "Successfully parsing USB storage information.");
 	return usb_dev;
 }
 
 void create_udev_rule(USB_DEV * usb_dev, char ** rule_str)
 {
+	logger("DEBUG", APP_NAME, "Start to create rule string for connected USB Storage.");
 	char rule_line[512] = DEFAULT_UDEV_RULE;
 	char idVendor[64], idProduct[64], serial[64], manufacturer[64], product[64];
 	
@@ -82,38 +85,51 @@ void create_udev_rule(USB_DEV * usb_dev, char ** rule_str)
 	}
 
 	strncpy(*rule_str, rule_line, strlen(rule_line));
-	fprintf(stdout, "[INFO] Successfully create draft rule string for newly connected USB storage.\n");
+	(*rule_str)[strlen(rule_line)] = '\0';
+
+	logger("DEBUG", APP_NAME, *rule_str);
+	logger("INFO", APP_NAME, "Successfully create draft rule string for connected USB storage.");
 }
 
 int register_td(char ** rule_str, USB_DEV * usb_dev, int blacklist)
 {
 	strncat(*rule_str, (blacklist == 0) ? "ENV{UDISKS_IGNORE}=\"0\"\n" : "ENV{UDISKS_IGNORE}=\"1\"\n", strlen("ENV{UDISKS_IGNORE}=\"0\"\n"));
-	fprintf(stdout, (blacklist == 1) ? "[INFO] Start registering blacklist USB Storage " : "[INFO] Start registering whitelist USB Storage ");
-	fprintf(
-		stdout,
-		"(%s:%s): vendor - %s, produdct - %s, serial - %s\n",
+
+	(blacklist == 1) ? 
+	logger("INFO", APP_NAME, "Start registering blacklist USB Storage.") :
+	logger("INFO", APP_NAME, "Start registering whitelist USB Storage.");
+	
+	char tmp[256] = "";
+	snprintf(
+		tmp, 
+		sizeof(tmp), 
+		"(%s:%s): vendor - %s, produdct - %s, serial - %s", 
 		usb_dev->idVendor,
 		usb_dev->idProduct,
 		usb_dev->manufacturer,
 		usb_dev->product,
-		(strlen(usb_dev->serial) == 0) ? "Unknown": usb_dev->serial
-	);
+		(strlen(usb_dev->serial) == 0) ? "Unknown": usb_dev->serial);
+	logger("DEBUG", APP_NAME, tmp);
 	
 	FILE * rule_file = fopen((blacklist == 1) ? CUSTOM_BLACKLIST_RULE : CUSTOM_WHITELIST_RULE, "a");
 	if (rule_file == NULL)
 	{
-		fprintf(stderr, "[ERROR] Fail to open UDAS rule file.\n");
+		logger("ERROR", APP_NAME, "Fail to open UDAS rule file.");
 		return EXIT_FAILURE;
 	}
 
 	// add new rule to file.
 	if (fputs(*rule_str, rule_file) < 0)
 	{
-		fprintf(stderr, (blacklist == 1) ? "[ERROR] Fail to register blacklist device.\n" : "[ERROR] Fail to register whitelist device for new USB storage.\n");
+		(blacklist == 1) ?
+		logger("ERROR", APP_NAME, "Fail to register blacklist device."):
+		logger("ERROR", APP_NAME, "Fail to register whitelist device for new USB storage.");
 		return EXIT_FAILURE;
 	}
 
-	fprintf(stdout, (blacklist == 1) ? "success to register blacklist device.\n" : "success to register new whitelist USB storage.\n");
+	(blacklist == 1) ? 
+	logger("INFO", APP_NAME, "success to register blacklist device.") :
+	logger("INFO", APP_NAME, "success to register new whitelist USB storage.") ;
 	fclose(rule_file);
 	return EXIT_SUCCESS;
 }
@@ -121,19 +137,24 @@ int register_td(char ** rule_str, USB_DEV * usb_dev, int blacklist)
 int remove_td(char ** rule_str, USB_DEV * usb_dev, int blacklist)
 {
 	strcat(*rule_str, (blacklist == 0) ? "ENV{UDISKS_IGNORE}=\"0\"\n" : "ENV{UDISKS_IGNORE}=\"1\"\n");
-	fprintf(stdout, (blacklist == 1) ? "[INFO] Start removing registered blacklist USB Storage " : "[INFO] Start removing registered whitelist USB Storage ");
 
-	fprintf(
-		stdout,
-		"(%s:%s): vendor - %s, produdct - %s, serial - %s\n",
+	(blacklist == 1) ? 
+	logger("INFO", APP_NAME, "Start removing registered blacklist USB Storage "): 
+	logger("INFO", APP_NAME, "Start removing registered whitelist USB Storage ");
+
+	char tmp[256] = "";
+	snprintf(
+		tmp, 
+		sizeof(tmp), 
+		"(%s:%s): vendor - %s, produdct - %s, serial - %s", 
 		usb_dev->idVendor,
 		usb_dev->idProduct,
 		usb_dev->manufacturer,
 		usb_dev->product,
-		(strlen(usb_dev->serial) == 0) ? "Unknown": usb_dev->serial
-	);
+		(strlen(usb_dev->serial) == 0) ? "Unknown": usb_dev->serial);
+	logger("DEBUG", APP_NAME, tmp);
 
-	char buffer[512];
+	char buffer[512] = "";
 	char * rule_file_name = (blacklist == 0) ? CUSTOM_WHITELIST_RULE : CUSTOM_BLACKLIST_RULE ;
 	char * rule_file_tmp_name = (blacklist == 0) ? CUSTOM_WHITELIST_RULE_TMP : CUSTOM_BLACKLIST_RULE_TMP ;
 
@@ -141,14 +162,15 @@ int remove_td(char ** rule_str, USB_DEV * usb_dev, int blacklist)
 	
 	if (rule_file == NULL)
 	{
-		fprintf(stderr, "[ERROR] Can not read custom rule file.\n");
+		logger("ERROR", APP_NAME, "Can not read custom rule file.");
 		return EXIT_FAILURE;
 	}
 
 	FILE * tmp_file = fopen(rule_file_tmp_name, "w");
+
 	if (rule_file == NULL)
 	{
-		fprintf(stderr, "[ERROR] Can not open tmp rule file.\n");
+		logger("ERROR", APP_NAME, "Can not open tmp rule file.");
 		return EXIT_FAILURE;
 	}
 
@@ -157,35 +179,41 @@ int remove_td(char ** rule_str, USB_DEV * usb_dev, int blacklist)
 		if (strcmp(buffer, *rule_str) != 0)	fputs(buffer, tmp_file);
 	}
 
+	fclose(rule_file);
+	fclose(tmp_file);
+	
 	remove(rule_file_name);
 	rename(rule_file_tmp_name, rule_file_name);
 
-	fclose(rule_file);
-	fclose(tmp_file);
+	(blacklist == 1) ? 
+	logger("INFO", APP_NAME, "Success to remove registered blacklist USB Storage "): 
+	logger("INFO", APP_NAME, "Success to remove registered whitelist USB Storage ");
 
 	return EXIT_SUCCESS;
 }
 
 int search_td(char ** rule_str, USB_DEV * usb_dev)
 {
-	fprintf(
-		stdout,
-		"[INFO] Start searching registered USB Storage (%s:%s): vendor - %s, produdct - %s, serial - %s\n",
+	char tmp[256] = "";
+	snprintf(
+		tmp, 
+		sizeof(tmp), 
+		"Start searching registered USB Storage (%s:%s): vendor - %s, produdct - %s, serial - %s",
 		usb_dev->idVendor,
 		usb_dev->idProduct,
 		usb_dev->manufacturer,
 		usb_dev->product,
-		(strlen(usb_dev->serial) == 0) ? "Unknown": usb_dev->serial
-	);
+		(strlen(usb_dev->serial) == 0) ? "Unknown": usb_dev->serial);
+	logger("DEBUG", APP_NAME, tmp);
 
 	int match_flag = 0;
-	char buffer[512];
+	char buffer[512] = "";
 	FILE * whitelist_file = fopen(CUSTOM_WHITELIST_RULE, "r");
 	FILE * blacklist_file = fopen(CUSTOM_BLACKLIST_RULE, "r");
 
 	if (whitelist_file == NULL)
 	{
-		fprintf(stderr, "[ERROR] Fail to open UDAS whitelist rule file.\n");
+		logger("ERROR", APP_NAME, "Fail to open UDAS whitelist rule file.");
 		return EXIT_FAILURE;
 	}
 
@@ -200,7 +228,7 @@ int search_td(char ** rule_str, USB_DEV * usb_dev)
 
 	if (blacklist_file == NULL)
 	{
-		fprintf(stderr, "[ERROR] Fail to open UDAS blacklist rule file.\n");
+		logger("ERROR", APP_NAME, "Fail to open UDAS blacklist rule file.");
 		return EXIT_FAILURE;
 	}
 
@@ -213,10 +241,154 @@ int search_td(char ** rule_str, USB_DEV * usb_dev)
 		}
 	}
 
-	if (match_flag == 0) fprintf(stdout, "[INFO] Device is not registered in whitelist and blacklist.\n");
-	else if (match_flag == 1) fprintf(stdout, "[INFO] Device is registered as whitelist.\n");
-	else if (match_flag == -1) fprintf(stdout, "[INFO] Device is registered as blacklist.\n");
+	if (match_flag == 0) logger("INFO", APP_NAME, "Device is not registered in neither whitelist nor blacklist."); 
+	else if (match_flag == 1) logger("INFO", APP_NAME, "Device is registered as whitelist.");
+	else if (match_flag == -1) logger("INFO", APP_NAME, "Device is registered as blacklist.");
 	return EXIT_SUCCESS;
+}
+
+int set_loglevel(FILE * config_file, FILE * config_file_tmp, char * loglevel)
+{
+	logger("INFO", APP_NAME, "Start updating log level.");
+
+	//Loglevel: Debug, Info, Warning, Critical
+	int result = EXIT_FAILURE;
+
+	if ((strncmp(loglevel, "debug", 5) == 0) || (strncmp(loglevel, "info", 4) == 0)|| (strncmp(loglevel, "warning", 7) == 0) || (strncmp(loglevel, "error", 5) == 0))
+	{
+		char buffer[256];
+		while (fgets(buffer, sizeof(buffer), config_file) != NULL)
+		{
+			if (strncmp(buffer, "level=", 6) == 0) 
+			{
+				char tmp[32];
+				sprintf(tmp, "level=%s\n", loglevel);
+				fputs(tmp, config_file_tmp);
+				result = EXIT_SUCCESS;
+
+				char log[256];
+				snprintf(log, sizeof(log), "Succeed to update log level to '%s'", loglevel);
+				logger("INFO", APP_NAME, log);
+				continue;
+			}
+
+			fputs(buffer, config_file_tmp);
+		}
+	}
+	
+	if (result == EXIT_FAILURE) ("WARNING", APP_NAME, "Failed to update log level.");
+	return result;
+}
+
+int set_password(FILE * config_file, FILE * config_file_tmp, char * old_password, char * new_password)
+{
+	logger("INFO", APP_NAME, "Start updating UDAS Password.");
+
+	// udas set passwd --old-password=pw --new-password=newpw
+	int result = EXIT_FAILURE;
+	
+	char * token_old_pw = strtok(old_password, "=");
+	token_old_pw = strtok(NULL, "=");
+	sprintf(old_password, "auth_str=%s\n", token_old_pw);
+
+	char * token_new_pw = strtok(new_password, "=");
+	token_new_pw = strtok(NULL, "=");
+	sprintf(new_password, "auth_str=%s\n", token_new_pw);
+
+	char buffer[256] = "";
+	while (fgets(buffer, sizeof(buffer), config_file) != NULL)
+	{
+		if (strncmp(buffer, old_password, strlen(old_password)) == 0)
+		{
+			fputs(new_password, config_file_tmp);
+			result = EXIT_SUCCESS;
+
+			char log[256] = "";
+			snprintf(log, sizeof(log), "Succeed to update UDAS password.");
+			logger("INFO", APP_NAME, log);
+			continue;
+		}
+		fputs(buffer, config_file_tmp);
+	}
+
+	if (result == EXIT_FAILURE) logger("WARNING", APP_NAME, "Failed to update UDAS password.");
+	return result;
+}
+
+int set_blacklist(FILE * config_file, FILE * config_file_tmp, char * blacklist)
+{
+	logger("INFO", APP_NAME, "Start updating blacklist setting.");
+
+	/* udas set blacklist on , udas set blacklist off */
+	int result = EXIT_FAILURE;
+
+	if ((strncmp(blacklist, "on", 2) == 0) || (strncmp(blacklist, "off", 3) == 0))
+	{
+		char buffer[256] = "";
+		while (fgets(buffer, sizeof(buffer), config_file) != NULL)
+		{
+			if (strncmp(buffer, "blacklist=", 10) == 0) 
+			{
+				char tmp[32] = "";
+				sprintf(tmp, "blacklist=%d\n", (strncmp(blacklist, "off", 3) == 0) ? 0 : 1 );
+				fputs(tmp, config_file_tmp);
+				result = EXIT_SUCCESS;
+
+				char log[256] = "";
+				snprintf(log, sizeof(log), "Succeed to update blacklist setting '%s'.", blacklist);
+				logger("INFO", APP_NAME, log);
+				continue;
+			}
+
+			fputs(buffer, config_file_tmp);
+		}
+	}
+
+	if (result == EXIT_FAILURE) logger("WARNING", APP_NAME, "Failed to update blacklist setting.");
+	return result;
+}
+
+int set_ns_policy(FILE * config_file, FILE * config_file_tmp, char * allow_ns)
+{
+	logger("INFO", APP_NAME, "Start update allowing non_serial number setting.");
+
+	/* udas set allow_ns on, udas set allow_ns off*/
+	int result = EXIT_FAILURE;
+
+	if ((strncmp(allow_ns, "on", 2) == 0) || (strncmp(allow_ns, "off", 3) == 0))
+	{
+		char buffer[256] = "";
+		while (fgets(buffer, sizeof(buffer), config_file) != NULL)
+		{
+			if (strncmp(buffer, "ns_policy=", strlen("ns_policy=")) == 0)
+			{
+				result = EXIT_SUCCESS;
+				char tmp[32] = "";
+				sprintf(tmp, "ns_policy=%d\n", (strncmp(allow_ns, "off", 3) == 0) ? 0 : 1 );
+				fputs(tmp, config_file_tmp);
+				continue;
+			}
+
+			fputs(buffer, config_file_tmp);
+		}
+	}
+
+	if (result == EXIT_SUCCESS)
+	{
+		char log[256] = "";
+		snprintf(log, sizeof(log), "Succeed to update allowing non_serial number setting '%s'.", allow_ns);
+		logger("INFO", APP_NAME, log);
+	}
+	else logger("WARNING", APP_NAME, "Failed to update allowing non_serial number setting.");
+	return result;
+}
+
+void reload_and_trigger()
+{
+	int reload_result = system("udevadm control --reload");
+	int reload_trigger = system("udevadm trigger");
+	logger("INFO", APP_NAME, "Reloaded and triggered new rule.");
+	return ;
 }
 
 int main (int argc, char * argv[])
@@ -252,7 +424,7 @@ int main (int argc, char * argv[])
 				
 				if (types != -1)
 				{
-					if (register_td(&rule_str, &usb_dev, types) == EXIT_SUCCESS) not_filtered = 0;
+					if ((register_td(&rule_str, &usb_dev, types) == EXIT_SUCCESS) && (types == 0)) not_filtered = 1;
 				}
 			}
 			else if ((strncmp(argv[2], "search", strlen("search"))) == 0)
@@ -267,9 +439,11 @@ int main (int argc, char * argv[])
 				else if(strncmp(argv[3], "whitelist", strlen("whitelist")) == 0) types = 0 ;
 				if (types != -1)
 				{
-					if (remove_td(&rule_str, &usb_dev, types) == EXIT_SUCCESS) not_filtered =0;
+					if (remove_td(&rule_str, &usb_dev, types) == EXIT_SUCCESS) not_filtered = 0;
 				}
 			}
+			
+			if (not_filtered == 1) reload_and_trigger();
 		}
 
 		free(rule_str);
@@ -286,98 +460,37 @@ int main (int argc, char * argv[])
 			return EXIT_FAILURE;
 		}
 
-		if ((strncmp(argv[2], "loglevel", strlen("loglevel"))) == 0)
+		if (((strncmp(argv[2], "loglevel", strlen("loglevel"))) == 0) && (argc == 4))
 		{
-			if (argc == 4)
-			{
-				//Loglevel: Debug, Info, Warning, Critical
-				char * loglevel = *(argv + 3);
-
-				if ((strncmp(loglevel, "debug", 5) == 0) || (strncmp(loglevel, "info", 4) == 0)|| (strncmp(loglevel, "warning", 7) == 0) || (strncmp(loglevel, "critical", 8) == 0))
-				{
-					char buffer[256];
-					while (fgets(buffer, sizeof(buffer), config_file) != NULL)
-					{
-						if (strncmp(buffer, "level=", 6) == 0) 
-						{
-							char tmp[32];
-							sprintf(tmp, "level=%s", loglevel);
-							fputs(tmp, config_file_tmp);
-							continue;
-						}
-
-						fputs(buffer, config_file_tmp);
-					}
-
-					not_filtered = 0;
-				}
-			}
+			if (set_loglevel(config_file, config_file_tmp, *(argv + 3)) == EXIT_SUCCESS) not_filtered = 0;
 		}
-		else if ((strncmp(argv[2], "passwd", strlen("passwd"))) == 0)
+		else if (((strncmp(argv[2], "passwd", strlen("passwd"))) == 0) && (argc == 5))
 		{
-			if (argc == 5)
-			{
-				// udas set passwd --old-password=pw --new-password=newpw
-				char * old_password = *(argv + 3);
-				char * new_password = *(argv + 4);
-				
-				char * token_old_pw = strtok(old_password, "=");
-				token_old_pw = strtok(NULL, "=");
-				sprintf(old_password, "auth_str=%s\n", token_old_pw);
-
-				char * token_new_pw = strtok(new_password, "=");
-				token_new_pw = strtok(NULL, "=");
-				sprintf(new_password, "auth_str=%s\n", token_new_pw);
-
-				char buffer[256];
-				while (fgets(buffer, sizeof(buffer), config_file) != NULL)
-				{
-					if (strncmp(buffer, old_password, strlen(old_password)) == 0)
-					{
-						fputs(new_password, config_file_tmp);
-						continue;
-					}
-					fputs(buffer, config_file_tmp);
-				}
-
-				not_filtered = 0;
-			}
+			if (set_password(config_file, config_file_tmp, *(argv + 3), *(argv + 4)) == EXIT_SUCCESS) not_filtered = 0;
 		}
-		else if ((strncmp(argv[2], "blacklist", strlen("blacklist"))) == 0)
+		else if (((strncmp(argv[2], "blacklist", strlen("blacklist"))) == 0) && (argc == 4))
 		{
-			if (argc == 4)
-			{
-				/* udas set blacklist on , udas set blacklist off */
-				char * blacklist = *(argv + 3);
-
-				if ((strncmp(blacklist, "on", 2) == 0) || (strncmp(blacklist, "off", 3) == 0))
-				{
-					char buffer[256];
-					while (fgets(buffer, sizeof(buffer), config_file) != NULL)
-					{
-						if (strncmp(buffer, "blacklist=", 10) == 0) 
-						{
-							char tmp[32];
-							sprintf(tmp, "blacklist=%d\n", (strncmp(blacklist, "off", 3) == 0) ? 0 : 1 );
-							fputs(tmp, config_file_tmp);
-							continue;
-						}
-
-						fputs(buffer, config_file_tmp);
-					}
-
-					not_filtered = 0;
-				}
-			}
+			if (set_blacklist(config_file, config_file_tmp, *(argv + 3)) == EXIT_SUCCESS) not_filtered = 0;
+		}
+		else if (((strncmp(argv[2], "ns_policy", strlen("ns_policy"))) == 0) && (argc == 4))
+		{
+			if (set_ns_policy(config_file, config_file_tmp, *(argv + 3)) == EXIT_SUCCESS) not_filtered = 0;
 		}
 
 		fclose(config_file);
 		fclose(config_file_tmp);
 
-		remove(CONFIG_FILE_PATH);
-		rename(CONFIG_FILE_TMP_PATH, CONFIG_FILE_PATH);
+        if (not_filtered == 0)
+        {
+            remove(CONFIG_FILE_PATH);
+            rename(CONFIG_FILE_TMP_PATH, CONFIG_FILE_PATH);
+        }
 	}
 
-	if (not_filtered == -1) manual();
+	if (not_filtered == -1)
+	{
+	    manual();
+	    return EXIT_FAILURE;
+	}
 	return EXIT_SUCCESS;
 }

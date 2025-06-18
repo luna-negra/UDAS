@@ -12,7 +12,8 @@ from udas.udas_pytool import (QMainWindow,
                               get_service_status,
                               remove_registered_usb_info,
                               sys,)
-from udas.udas_custom_widget import (CustomComboboxWithButton,
+from udas.udas_custom_widget import (COLOR_SEPARATE_LINE,
+                                     CustomComboboxWithButton,
                                      CustomDialogPasswordChange,
                                      CustomDialogPasswordInput,
                                      CustomLabelWithButton,
@@ -25,10 +26,10 @@ from udas.udas_custom_widget import (CustomComboboxWithButton,
                                      custom_separate_line,
                                      custom_splitter_fixed,
                                      custom_widget_for_layout,
-                                     CustomMessageBox, custom_text_edit, )
+                                     CustomMessageBox,
+                                     partial,)
 
 
-COLOR_SEPARATE_LINE: str = "#333"
 DIALOG_PASSWORD_TITLE: str = "UDAS Authentication"
 DIALOG_PASSWORD_WIDTH: int = 400
 DIALOG_PASSWORD_HEIGHT: int = 200
@@ -140,22 +141,22 @@ class MainWindow(QMainWindow):
             "MAIN": {
                 "status": "Display status summary...",
                 "style": BUTTON_SIDEBAR_STYLE,
-                "connect": lambda: self.__main(),
+                "connect": self.__main,
             },
             "MANAGEMENT": {
                 "status": "Manage registered USB devices...",
                 "style": BUTTON_SIDEBAR_STYLE,
-                "connect": lambda: self.__mgmt(),
+                "connect": self.__mgmt,
             },
             "SETTINGS": {
                 "status": "UDAS settings...",
                 "style": BUTTON_SIDEBAR_STYLE,
-                "connect": lambda: self.__settings(),
+                "connect": self.__settings,
             },
             "LOG": {
                 "status": "Check process logs...",
                 "style": BUTTON_SIDEBAR_STYLE,
-                "connect": lambda: self.__log(),
+                "connect": self.__log,
             },
         }
 
@@ -423,7 +424,8 @@ class MainWindow(QMainWindow):
                                                             button_text="OFF" if config.get_blacklist() else "ON",
                                                             button_style=BUTTON_GENERAL_STYLE,
                                                             button_status_tip="Edit blacklist setting...",
-                                                            connect=lambda: self.__change_blacklist_setting(current_value=config.get_blacklist()))
+                                                            connect=partial(self.__change_blacklist_setting,
+                                                                            current_value=config.get_blacklist()),)
 
         widget_layout_ctrl_allow_ns = CustomLabelWithButton(total_width=total_width,
                                                             height=height,
@@ -433,7 +435,8 @@ class MainWindow(QMainWindow):
                                                             button_text="OFF" if config.get_allow_ns() else "ON",
                                                             button_style=BUTTON_GENERAL_STYLE,
                                                             button_status_tip="Edit allow non serial number device...",
-                                                            connect=lambda: self.__change_allow_ns_settings(current_value=config.get_allow_ns()))
+                                                            connect=partial(self.__change_allow_ns_settings,
+                                                                            current_value=config.get_allow_ns()), )
 
         widget_layout_ctrl_password = CustomLabelWithButton(total_width=total_width,
                                                             height=height,
@@ -443,7 +446,7 @@ class MainWindow(QMainWindow):
                                                             button_text="Change",
                                                             button_style=BUTTON_GENERAL_STYLE,
                                                             button_status_tip="Change UDAS Password...",
-                                                            connect=lambda: self.__change_password())
+                                                            connect=self.__change_password)
 
         label_logging_preamble = custom_label(text="<b>Logging</b>", width=total_width, height=30)
 
@@ -464,9 +467,9 @@ class MainWindow(QMainWindow):
 
         layout = custom_box_layout(children=[label_settings_preamble,
                                              widget_layout_ctrl_service,
+                                             widget_layout_ctrl_allow_ns,
                                              widget_layout_ctrl_blacklist,
                                              widget_layout_ctrl_password,
-                                             widget_layout_ctrl_allow_ns,
                                              custom_separate_line(color=COLOR_SEPARATE_LINE),
                                              label_logging_preamble,
                                              widget_layout_ctrl_loglevel],

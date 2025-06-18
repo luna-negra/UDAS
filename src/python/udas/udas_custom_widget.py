@@ -23,6 +23,8 @@ from .udas_pytool import (Qt,
                          exit_process,)
 
 
+COLOR_SEPARATE_LINE: str = "#333"
+
 def custom_box_layout(children: list,
                       vertical: bool = True,
                       stretch: bool = True,
@@ -567,7 +569,7 @@ class CustomDialogPasswordInput(QDialog):
                                          width=self.__label_width,
                                          height=self.__label_height,)
 
-        btn_cancel.clicked.connect(lambda: self.reject())
+        btn_cancel.clicked.connect(self.reject)
         btn_enter.clicked.connect(self.__accept)
 
         layout_button = custom_box_layout(children=[btn_cancel, btn_enter],
@@ -689,7 +691,7 @@ class CustomLogViewer(QWidget):
 
         # create layout
         layout = custom_box_layout(children=[self.__text_editor,
-                                             custom_separate_line(color="#333"),
+                                             custom_separate_line(color=COLOR_SEPARATE_LINE),
                                              buttons_layout])
         self.setLayout(layout)
         return None

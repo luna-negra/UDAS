@@ -402,7 +402,6 @@ int main (int argc, char * argv[])
 		strncat(command, " ", 2);
 	}
 	command[strlen(command)] = '\0';
-	logger("DEBUG", APP_NAME, command);
 
 	if (argc < 4)
 	{

@@ -16,6 +16,7 @@ from udas.udas_custom_widget import (CustomComboboxWithButton,
                                      CustomDialogPasswordChange,
                                      CustomDialogPasswordInput,
                                      CustomLabelWithButton,
+                                     CustomLogViewer,
                                      CustomTableWithOneButton,
                                      custom_box_layout,
                                      custom_push_button,
@@ -23,7 +24,8 @@ from udas.udas_custom_widget import (CustomComboboxWithButton,
                                      custom_labels_kv,
                                      custom_separate_line,
                                      custom_splitter_fixed,
-                                     custom_widget_for_layout, QMessageBox, )
+                                     custom_widget_for_layout,
+                                     CustomMessageBox, custom_text_edit, )
 
 
 COLOR_SEPARATE_LINE: str = "#333"
@@ -55,6 +57,8 @@ BUTTON_SIDEBAR_STYLE: str = """
 """
 BUTTON_GENERAL_STYLE: str = BUTTON_SIDEBAR_STYLE
 LAYOUT_MAIN_CONTENT_MARGIN:int = 20
+LOG_WINDOW_WIDTH: int = WIDGET_MAIN_CONTENT_WIDTH - 2 * LAYOUT_MAIN_CONTENT_MARGIN
+LOG_WINDOW_HEIGHT: int = 330
 
 
 class MainWindow(QMainWindow):
@@ -189,6 +193,17 @@ class MainWindow(QMainWindow):
 
     def __log(self):
         clear_layout(self.widget_main_content)
+
+        log_viewer = CustomLogViewer(total_width=LOG_WINDOW_WIDTH,
+                                     total_height=WIDGET_MAIN_CONTENT_HEIGHT - 100,
+                                     text_edit_height=LOG_WINDOW_HEIGHT,
+                                     button_style=BUTTON_GENERAL_STYLE)
+
+        layout = custom_box_layout(children=[log_viewer],
+                                   margin_l=LAYOUT_MAIN_CONTENT_MARGIN,
+                                   margin_t=LAYOUT_MAIN_CONTENT_MARGIN,)
+
+        self.widget_main_content.setLayout(layout)
         return None
 
     def __main(self):
@@ -317,8 +332,12 @@ class MainWindow(QMainWindow):
         self.widget_main_content.setLayout(layout_test)
         return None
 
-    def __remove_registered_rule(self, table, blacklist:bool=False):
+    def __remove_registered_rule(self, table, blacklist:bool=False) -> None:
         selected_item: list = table.selectedItems()
+
+        if len(selected_item) == 0:
+            return None
+
         row: int = table.currentRow()
         manufacturer, id_vendor = [text.strip("()") for text in selected_item[0].text().split()]
         product, id_product = [text.strip("()") for text in selected_item[1].text().split()]
@@ -339,25 +358,16 @@ class MainWindow(QMainWindow):
         exit_code = cmd_result.returncode
         if exit_code == 0:
             table.removeRow(row)
-            # MessageBox
+            CustomMessageBox(msg_box_text="Success to remove registered device",
+                             msg_box_type="information",).exec()
 
         elif exit_code == 1:
-            msg_box = QMessageBox()
-            msg_box.setText("[ERROR] Wrong command format.")
-            msg_box.setIcon(QMessageBox.Critical)
-
-            msg_box.setStandardButtons(QMessageBox.Abort)
-            msg_box.setDefaultButton(QMessageBox.Abort)
-            msg_box.exec()
+            CustomMessageBox(msg_box_text="[ERROR] Wrong command format.",
+                             msg_box_type="critical").exec()
 
         elif exit_code == 127:
-            msg_box = QMessageBox()
-            msg_box.setText("[ERROR] Can not use UDAS command in your machine.")
-            msg_box.setIcon(QMessageBox.Critical)
-
-            msg_box.setStandardButtons(QMessageBox.Abort)
-            msg_box.setDefaultButton(QMessageBox.Abort)
-            msg_box.exec()
+            CustomMessageBox(msg_box_text="[ERROR] Can not use UDAS command in your machine.",
+                             msg_box_type="critical").exec()
 
         else:
             pass

@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (QApplication,
                                QListWidgetItem,
                                QTableWidget,
                                QTableWidgetItem,
+                               QTextEdit,
                                QCheckBox,
                                QComboBox,
                                QLineEdit,
@@ -105,6 +106,12 @@ def encrypt_str(string:str) -> str:
 
 def exit_process(exit_code: int=0) -> None:
     sys.exit(exit_code)
+
+def get_logs(grep: str | None = None) -> subprocess.CompletedProcess:
+    command: str = "cat /var/log/udas/udas.log"
+    if grep is not None:
+        command += f" | grep {grep}"
+    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
 
 def get_rules(is_white: bool=True) -> list:
     result = []

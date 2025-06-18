@@ -30,11 +30,11 @@ class AlertNewUSB(QMessageBox):
         centralise_fixed(self, 400, 200)
         self.init_ui(args)
 
-    def init_ui(self, options: tuple):
+    def init_ui(self, options: tuple) -> None:
         if len(options) == 1:
             self.setText("[WARNING] Invalid Execute Command.\n")
             self.setIcon(QMessageBox.Warning)
-            return
+            return None
 
         # get information from cmd options
         usb_info: dict = get_usb_info(options)
@@ -42,7 +42,7 @@ class AlertNewUSB(QMessageBox):
         if usb_info.get("product") is None or usb_info.get("product") == "" or usb_info.get("manufacturer") is None or usb_info.get("manufacturer") == "":
             self.setText("[WARNING] Can not read USB Storage information.\n")
             self.setIcon(QMessageBox.Warning)
-            return
+            return None
 
         # apply allow_ns
         if ConfigIni().get_allow_ns() == 1 and usb_info.get("serial") == "Unknown":

@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Any
 from .udas_pytool import (Qt,
                          QWidget,
@@ -13,9 +14,11 @@ from .udas_pytool import (Qt,
                          QPushButton,
                          QTableWidget,
                          QTableWidgetItem,
+                         QTextEdit,
                          QAbstractItemView,
                          ConfigIni,
                          change_password,
+                         get_logs,
                          encrypt_str,
                          exit_process,)
 
@@ -154,6 +157,7 @@ def custom_table(total_width: int,
                  cell_align: str | None = "center",
                  is_enable: bool = False,
                  is_select_columns: bool = True,
+                 is_single_selection: bool = True,
                  is_vertical_header: bool = False,
                  is_resize_row_to_contents: bool = False,
                  is_resize_column_to_contents: bool = False,) -> QTableWidget:
@@ -177,7 +181,11 @@ def custom_table(total_width: int,
 
     # set select behavior
     if is_select_columns:
-        t.setSelectionBehavior(QTableWidget.SelectRows)
+        t.setSelectionBehavior(QAbstractItemView.SelectRows)
+
+    # set single selection
+    if is_single_selection:
+        t.setSelectionMode(QAbstractItemView.SingleSelection)
 
     # set visible on vertical header
     t.verticalHeader().setVisible(is_vertical_header)
@@ -205,6 +213,20 @@ def custom_table(total_width: int,
     # stretch last column.
     t.horizontalHeader().setStretchLastSection(True)
     return t
+
+def custom_text_edit(width: int,
+                     height: int,
+                     style: str | None = None,
+                     enable: bool = False,
+                     text: str = "",
+                     ) -> QTextEdit:
+    te = QTextEdit()
+    te.setFixedSize(width, height)
+    te.setStyleSheet(style)
+    te.setText(text)
+    if not enable:
+        te.setTextInteractionFlags(Qt.NoTextInteraction)
+    return te
 
 def custom_widget_for_layout(width: int,
                              height: int,
@@ -625,6 +647,94 @@ class CustomLabelWithButton(QWidget):
         return None
 
 
+class CustomLogViewer(QWidget):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.__total_width: int = kwargs.get("total_width")
+        self.__total_height: int = kwargs.get("total_height")
+
+        self.__text_edit_height: int = kwargs.get("text_edit_height")
+        self.__text_edit_style: str | None = kwargs.get("text_edit_style", None)
+        self.__text_edit_enable: bool = kwargs.get("text_edit_enable", False)
+
+        self.__button_text_list: list = ["ERROR", "WARNING", "INFO", "DEBUG"]
+        self.__button_width: int = int((self.__total_width / len(self.__button_text_list)) - 10)
+        self.__button_height: int = 30
+        self.__button_style: str | None = kwargs.get("button_style", None)
+
+        self.__init_ui()
+
+
+    def __init_ui(self):
+        # create text_editor to show logs.
+        self.__text_editor = custom_text_edit(width=self.__total_width,
+                                              height=self.__text_edit_height,
+                                              style=self.__text_edit_style,
+                                              enable=self.__text_edit_enable)
+
+        # print out all logs.
+        self.__get_logs()
+
+        # create buttons for log level
+        button_list: list = []
+        for btn_text in self.__button_text_list:
+            button_list.append(custom_push_button(width=self.__button_width,
+                                                  height=self.__button_height,
+                                                  text=f"{btn_text}",
+                                                  style=self.__button_style,
+                                                  status_tip=f"Show {btn_text.lower()} logs...",
+                                                  connect=partial(self.__get_logs, btn_text)))
+
+        buttons_layout = custom_box_layout(children=button_list, vertical=False,)
+
+        # create layout
+        layout = custom_box_layout(children=[self.__text_editor,
+                                             custom_separate_line(color="#333"),
+                                             buttons_layout])
+        self.setLayout(layout)
+        return None
+
+    def __get_logs(self, grep: str | None = None) -> None:
+        logs = get_logs(grep=grep).stdout.decode("utf-8").replace(": [", ":\n[").replace("] ", "]\n")
+        self.__text_editor.setText(logs)
+        return None
+
+
+class CustomMessageBox(QMessageBox):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.__text = kwargs.get("msg_box_text")
+        self.__msg_box_type = kwargs.get("msg_box_type", "information")
+        self.__init_ui()
+
+    def __init_ui(self):
+        # set text for MessageBox
+        self.setText(self.__text)
+
+        # set icon for MessageBox
+        if self.__msg_box_type == "information":
+            self.setIcon(QMessageBox.Information)
+            self.setStandardButtons(QMessageBox.Ok)
+            self.setDefaultButton(QMessageBox.Ok)
+
+        elif self.__msg_box_type == "Warning":
+            self.setIcon(QMessageBox.Warning)
+            self.setStandardButtons(QMessageBox.Ok)
+            self.setDefaultButton(QMessageBox.Ok)
+
+        elif self.__msg_box_type == "Critical":
+            self.setIcon(QMessageBox.Critical)
+            self.setStandardButtons(QMessageBox.Abort)
+            self.setDefaultButton(QMessageBox.Abort)
+
+        elif self.__msg_box_type == "Question":
+            self.setIcon(QMessageBox.Question)
+            self.setStandardButtons(QMessageBox.No | QMessageBox.Yes)
+            self.setDefaultButton(QMessageBox.No)
+
+        return
+
+
 class CustomTableWithOneButton(QWidget):
     def __init__(self, **kwargs):
         super().__init__()
@@ -682,7 +792,7 @@ class CustomTableWithOneButton(QWidget):
                                     is_resize_row_to_contents=self.__is_resize_row_to_contents,
                                     is_resize_column_to_contents=self.__is_resize_column_to_contents)
 
-        self.table.itemClicked.connect(lambda: self.__on_click_table_item())
+        self.table.itemClicked.connect(self.__on_click_table_item)
 
         self.__button = custom_push_button(text=self.__button_text,
                                            width=self.__button_width,
@@ -693,7 +803,7 @@ class CustomTableWithOneButton(QWidget):
                                            default=self.__button_default,
                                            status_tip=self.__button_status_tip)
 
-        self.__button.clicked.connect(lambda: self.__button_connect)
+        self.__button.clicked.connect(self.__button_connect)
 
         blank_label = custom_label(text="",
                                    width=int(self.__total_width * self.__ratio),

@@ -198,7 +198,7 @@ int search_td(char ** rule_str, USB_DEV * usb_dev)
 	snprintf(
 		tmp, 
 		sizeof(tmp), 
-		"[INFO] Start searching registered USB Storage (%s:%s): vendor - %s, produdct - %s, serial - %s", 
+		"Start searching registered USB Storage (%s:%s): vendor - %s, produdct - %s, serial - %s",
 		usb_dev->idVendor,
 		usb_dev->idProduct,
 		usb_dev->manufacturer,
@@ -394,14 +394,6 @@ void reload_and_trigger()
 int main (int argc, char * argv[])
 {
 	int not_filtered = -1;
-	char command[512] = "";
-
-	for (int i = 0; i < argc ; i++)
-	{
-		strncat(command, *(argv + i), strlen(*(argv + i)));
-		strncat(command, " ", 2);
-	}
-	command[strlen(command)] = '\0';
 
 	if (argc < 4)
 	{

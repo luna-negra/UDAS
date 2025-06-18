@@ -2,7 +2,7 @@ from udas.udas_pytool import (QMainWindow,
                               QApplication,
                               ConfigIni,
                               centralise_fixed,
-                              change_allow_ns,
+                              change_ns_policy,
                               change_blacklist,
                               change_loglevel,
                               clear_layout,
@@ -72,12 +72,6 @@ class MainWindow(QMainWindow):
         # display main screen.
         self.__main()
 
-    def __change_allow_ns_settings(self, current_value):
-        cmd_result = change_allow_ns(opt="off" if current_value == 1 else "on")
-        if cmd_result.returncode == 0:
-            self.__settings()
-        return None
-
     def __change_blacklist_setting(self, current_value:int):
         cmd_result = change_blacklist(opt="off" if current_value == 1 else "on")
         if cmd_result.returncode == 0:
@@ -86,6 +80,12 @@ class MainWindow(QMainWindow):
 
     def __change_loglevel(self, combobox, item_list: list):
         cmd_result = change_loglevel(item_list[combobox.currentIndex()].lower())
+        if cmd_result.returncode == 0:
+            self.__settings()
+        return None
+
+    def __change_ns_policy_settings(self, current_value):
+        cmd_result = change_ns_policy(opt="off" if current_value == 1 else "on")
         if cmd_result.returncode == 0:
             self.__settings()
         return None
@@ -430,13 +430,13 @@ class MainWindow(QMainWindow):
         widget_layout_ctrl_allow_ns = CustomLabelWithButton(total_width=total_width,
                                                             height=height,
                                                             ratio=0.7,
-                                                            label_text="Allow Non Serial Device [On / Off]",
+                                                            label_text="Block Non Serial Device [On / Off]",
                                                             button_width=button_width,
-                                                            button_text="OFF" if config.get_allow_ns() else "ON",
+                                                            button_text="OFF" if config.get_ns_policy() else "ON",
                                                             button_style=BUTTON_GENERAL_STYLE,
                                                             button_status_tip="Edit allow non serial number device...",
-                                                            connect=partial(self.__change_allow_ns_settings,
-                                                                            current_value=config.get_allow_ns()), )
+                                                            connect=partial(self.__change_ns_policy_settings,
+                                                                            current_value=config.get_ns_policy()), )
 
         widget_layout_ctrl_password = CustomLabelWithButton(total_width=total_width,
                                                             height=height,

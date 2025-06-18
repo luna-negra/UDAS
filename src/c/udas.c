@@ -348,7 +348,7 @@ int set_blacklist(FILE * config_file, FILE * config_file_tmp, char * blacklist)
 	return result;
 }
 
-int set_allow_ns(FILE * config_file, FILE * config_file_tmp, char * allow_ns)
+int set_ns_policy(FILE * config_file, FILE * config_file_tmp, char * allow_ns)
 {
 	logger("INFO", APP_NAME, "Start update allowing non_serial number setting.");
 
@@ -360,11 +360,11 @@ int set_allow_ns(FILE * config_file, FILE * config_file_tmp, char * allow_ns)
 		char buffer[256] = "";
 		while (fgets(buffer, sizeof(buffer), config_file) != NULL)
 		{
-			if (strncmp(buffer, "allow_non_serial=", strlen("allow_non_serial=")) == 0) 
+			if (strncmp(buffer, "ns_policy=", strlen("ns_policy=")) == 0)
 			{
 				result = EXIT_SUCCESS;
 				char tmp[32] = "";
-				sprintf(tmp, "allow_non_serial=%d\n", (strncmp(allow_ns, "off", 3) == 0) ? 0 : 1 );
+				sprintf(tmp, "ns_policy=%d\n", (strncmp(allow_ns, "off", 3) == 0) ? 0 : 1 );
 				fputs(tmp, config_file_tmp);
 				continue;
 			}
@@ -480,9 +480,9 @@ int main (int argc, char * argv[])
 		{
 			if (set_blacklist(config_file, config_file_tmp, *(argv + 3)) == EXIT_SUCCESS) not_filtered = 0;
 		}
-		else if (((strncmp(argv[2], "allow_ns", strlen("allow_ns"))) == 0) && (argc == 4))
+		else if (((strncmp(argv[2], "ns_policy", strlen("ns_policy"))) == 0) && (argc == 4))
 		{
-			if (set_allow_ns(config_file, config_file_tmp, *(argv + 3)) == EXIT_SUCCESS) not_filtered = 0;
+			if (set_ns_policy(config_file, config_file_tmp, *(argv + 3)) == EXIT_SUCCESS) not_filtered = 0;
 		}
 
 		fclose(config_file);

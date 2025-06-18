@@ -52,16 +52,16 @@ def centralise_fixed(obj, width: int, height: int):
     obj.setFixedSize(width, height)
     return None
 
-def change_allow_ns(opt: str) -> subprocess.CompletedProcess:
-    command: str = f"pkexec udas set allow_ns {opt}"
-    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
-
 def change_blacklist(opt: str) -> subprocess.CompletedProcess:
     command: str = f"pkexec udas set blacklist {opt}"
     return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
 
 def change_loglevel(log_level:str) -> subprocess.CompletedProcess:
     command: str = f"pkexec udas set loglevel {log_level}"
+    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
+
+def change_ns_policy(opt: str) -> subprocess.CompletedProcess:
+    command: str = f"pkexec udas set ns_policy {opt}"
     return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
 
 def change_password(old_pw: str, new_pw:str) -> subprocess.CompletedProcess:
@@ -120,10 +120,10 @@ def get_rules(is_white: bool=True) -> list:
 
     run_result = run(f"cat {file_path}", stdout=PIPE, stderr=PIPE, shell=True)
     if run_result.returncode == 0:
-        whitelist_regex = re.compile(RULE_REGEX)
+        regex = re.compile(RULE_REGEX)
 
         for line in run_result.stdout.decode(ENCODING).split("\n"):
-            regex_result = whitelist_regex.search(line)
+            regex_result = regex.search(line)
 
             if regex_result is None:
                 continue
@@ -192,19 +192,18 @@ class ConfigIni:
 
         else:
             self.__version = self.__config["Version"].get("version")
-            self.__allow_ns = self.__config["Management"].get("allow_non_serial")
+            self.__ns_policy = self.__config["Management"].get("ns_policy")
             self.__auth_str = self.__config["Management"].get("auth_str")
             self.__blacklist = self.__config["Management"].get("blacklist")
             self.__lang = self.__config["Management"].get("lang")
-            self.__log_path = self.__config["Logging"].get("path")
             self.__log_level = self.__config["Logging"].get("level")
 
     def get_version(self):
         return self.__version
 
-    def get_allow_ns(self):
+    def get_ns_policy(self):
         try:
-            value = int(self.__allow_ns)
+            value = int(self.__ns_policy)
         except ValueError:
             return 0
         return value
@@ -222,40 +221,10 @@ class ConfigIni:
     def get_lang(self):
         return self.__lang
 
-    def get_log_path(self):
-        return self.__log_path
 
     def get_log_level(self):
         return self.__log_level
 
-    def set_allow_ns(self, on_off: int):
-        self.__allow_ns = str(on_off)
-        return None
-
-    def set_auth_str(self, enc_auth_str: str):
-        self.__auth_str = enc_auth_str
-        return None
-
-    def set_blacklist(self, on_off: int):
-        self.__blacklist = str(on_off)
-        return None
-
-    def set_lang(self, lang: str):
-        self.__lang = lang
-        return None
-
-    def set_log_path(self, log_path: str):
-        self.__log_path = log_path
-        return None
-
-    def set_log_level(self, log_level: str):
-        self.__log_level = log_level
-        return None
-
-    def write(self):
-        with open(CONFIG_PATH, "w") as f:
-            self.__config.write(f)
-        return None
 
     def reject(self):
         sys.exit(-1)

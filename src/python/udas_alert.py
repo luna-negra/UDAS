@@ -45,7 +45,7 @@ class AlertNewUSB(QMessageBox):
             return None
 
         # apply allow_ns
-        if ConfigIni().get_allow_ns() == 1 and usb_info.get("serial") == "Unknown":
+        if ConfigIni().get_ns_policy() == 1 and usb_info.get("serial") == "Unknown":
             self.setText("[WARNING]\n Connected USB Storage does not have serial number.")
             self.setIcon(QMessageBox.Critical)
             self.setStandardButtons(QMessageBox.Abort)

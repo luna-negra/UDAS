@@ -1,5 +1,8 @@
 *
 !.gitignore
+!src/
+!src/c/
+!src/c/Makefile
 !src/c/udas.*
 !src/c/udas_common.*
 !src/c/udas_detector.*

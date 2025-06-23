@@ -8,8 +8,8 @@ PKG_ARCHITECTURE="amd64"
 PKG_FOLDER=$PKG_NAME-$PKG_VERSION-$PKG_ARCHITECTURE
 CONFIG_FOLDER=$PKG_FOLDER/etc/udas/config
 DEBIAN_FOLDER=$PKG_FOLDER/DEBIAN
-LIBRARY_NAME="libusb-1.0.0-dev"
-LIBRARY_VERSION=2:1.0.27-1
+LIBUSB_NAME="libusb-1.0.0-dev"
+LIBUSB_VERSION=2:1.0.27-1
 UDEV_RULE_FOLDER=$PKG_FOLDER/etc/udev/rules.d
 
 
@@ -67,15 +67,30 @@ check_build_essential () {
 # check library libusb-1.0.0 is exist and version equal or up to 1.0.27
 # return 0 for installed, 1 for not installed.
 # if return 1, execute install_libusb()
-check_library () {
+check_libusb () {
   echo -n "* Check libusb installed: "
 
-  dpkg -l | grep $LIBRARY_NAME | grep $LIBRARY_VERSION > /dev/null
+  dpkg -l | grep $LIBUSB_NAME | grep $LIBUSB_VERSION > /dev/null
   if [ $? -eq 0 ]; then
     echo -e "\e[1;32mInstalled\e[0;0m"
     return 0
   else
-    echo -e "\e[1;31mNot Installed\e[0;0m."
+    echo -e "\e[1;33mNot Installed\e[0;0m."
+    return 1
+  fi
+}
+
+# check libxcb
+# return 0 for installed, 1 for not installed.
+# if return 1, execute install_libxcb_cursor()
+check_libxcb_cursor() {
+  echo -n "* Check libxcb-cursor0 installed: "
+  dpkg -l | grep libxcb-cursor0 > /dev/null
+  if [ $? -eq 0 ]; then
+    echo -e "\e[1;32mInstalled\e[0;0m"
+    return 0
+  else
+    echo -e "\e[1;33mNot Installed"
     return 1
   fi
 }
@@ -360,7 +375,7 @@ create_rule_files () {
       echo -e "\e[1;32mOK\e[0;0m"
     done
 
-  echo "ACTION==\"add\", SUBSYSTEM==\"block\" ENV{UDISKS_IGNORE}!="0" ENV{UDISKS_IGNORE}=1" > $UDEV_RULE_FOLDER/${RULE_FILE_LIST[2]}
+  echo "ACTION==\"add\", SUBSYSTEM==\"block\", ENV{UDISKS_IGNORE}!=\"0\", ENV{UDISKS_IGNORE}=\"1\"" > $UDEV_RULE_FOLDER/${RULE_FILE_LIST[2]}
 }
 
 # create udev rule folder
@@ -380,34 +395,6 @@ create_rule_folder () {
   fi
 }
 
-# install build-essential
-install_build_essential () {
-  echo -n "  * Install build-essential: "
-  apt-get install -y build-essential
-  if [ $? - ne 0 ]; then
-    echo -e "\e[1;31mFail\e[0;0m"
-    echo -e "\e[1;31m\n[ERROR} Fail to install build-essential\n\e[0;0m"
-    exit 1
-  fi
-
-  echo -e "\e[1;32mOK\e[0;0m"
-  return 0
-}
-
-# install libusb-1.0.0-dev
-# return 0 for install successfully, 1 for fail
-install_libusb () {
-  apt-get install -y $LIBRARY_NAME=$LIBRARY_VERSION
-  if [ $? -ne 0 ]; then
-    echo -e "\e[1;31mFail\e[0;0m"
-    echo -e "\e[1;31m\n[ERROR} Fail to install libusb-1.0.0-dev\n\e[0;0m"
-    exit 1
-  fi
-
-  echo -e "\e[1;32mOK\e[0;0m"
-  return 0
-}
-
 # install requirements
 install_requirements () {
   echo -n "* Install python packages: "
@@ -421,6 +408,13 @@ install_requirements () {
   fi
 }
 
+# remove trash
+remove_trash () {
+  rm -rf src/python/build
+  rm -rf src/python/*.spec
+}
+
+
 # main function
 main () {
   clear;
@@ -429,13 +423,30 @@ main () {
   check_source_python
   check_source_script
   check_config_file
+
   check_build_essential
-  if [[ $? -ne 0 ]]; then
-    install_build_essential
-  fi
-  check_library
-  if [[ $? -ne 0 ]]; then
-    install_libusb
+  result_build_essential=$?
+
+  check_libusb
+  result_libusb=$?
+
+  check_libxcb_cursor
+  result_libxcb_cursor0=$?
+
+  if [ $result_build_essential -eq 1 ] || [ $result_libusb -eq 1 ] || [ $result_libxcb_cursor0 -eq 1 ]; then
+    echo -e "\e[1;33m[WARNING] You have to install ubuntu package first. Please refer to the command below.\n\e[0;0m"
+    echo -n " - Command: sudo apt-get install -y "
+    if [ $result_build_essential -eq 1 ]; then
+      echo -n "build_essential "
+    fi
+    if [ $result_libusb -eq 1 ]; then
+      echo -n "libusb-1.0.0-dev "
+    fi
+    if [ $result_libxcb_cursor0 -eq 1 ]; then
+      echo -n "libxcb-cursor0 "
+    fi
+    echo ""
+    exit 1
   fi
 
   echo ""
@@ -462,6 +473,7 @@ main () {
   echo "[Take Off]"
   compile_c_source
   compile_python_source
+  remove_trash
 
   echo ""
   echo "COMPLETE Process"

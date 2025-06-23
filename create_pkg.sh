@@ -2,6 +2,12 @@
 
 
 # set global vars
+PKG_NAME="udas"
+PKG_VERSION="0.0-0"
+PKG_ARCHITECTURE="amd64"
+PKG_FOLDER=$PKG_NAME-$PKG_VERSION-$PKG_ARCHITECTURE
+CONFIG_FOLDER=$PKG_FOLDER/etc/udas/config
+DEBIAN_FOLDER=$PKG_FOLDER/DEBIAN
 LIBRARY_NAME="libusb-1.0.0-dev"
 LIBRARY_VERSION=2:1.0.27-1
 
@@ -136,7 +142,7 @@ compile_python_source () {
   cd src/python
   if [ $? -eq 0 ]; then
     echo -n "  - udas_alert: "
-    pyinstaller -F -w udas_alert.py --name=udas_alert --distpath=../../usr/bin/. --add-data=udas:udas --collect-data=PySide6 2> /dev/null
+    pyinstaller -F -w udas_alert.py --name=udas_alert --distpath=../../$PKG_FOLDER/usr/bin/. --add-data=udas:udas --collect-data=PySide6 2> /dev/null
     if [ $? -ne 0 ]; then
       echo -e "\e[1;31mFail\e[0;0m"
       echo -e "\e[1;31m\n[ERROR] Fail to compile 'udas-alert'.\n\e[0;0m"
@@ -146,7 +152,7 @@ compile_python_source () {
     fi
 
     echo -n "  - udas_gui: "
-    pyinstaller -F -w udas_gui.py --name=udas_gui --distpath=../../usr/bin/. --add-data=udas:udas --collect-data=PySide6 2> /dev/null
+    pyinstaller -F -w udas_gui.py --name=udas_gui --distpath=../../$PKG_FOLDER/usr/bin/. --add-data=udas:udas --collect-data=PySide6 2> /dev/null
 
     if [ $? -ne 0 ]; then
       echo -e "\e[1;32mOK\e[0;0m"
@@ -160,9 +166,39 @@ compile_python_source () {
   fi
 }
 
+# copy config_template file
+copy_config_file () {
+  echo -n "* Copy config template: "
+  cp config.ini $CONFIG_FOLDER
+  if [ $? -ne 0 ]; then
+    echo -e "\e[1;31mFail\e[0;0m"
+    echo -e "\e[1;31m\n[ERROR] Fail to copy config file to config folder.\n\e[0;0m"
+    exit 1
+  else
+    echo -e "\e[1;32mOK\e[0;0m"
+  fi
+}
+
+# create pgk folder
+create_pkg_folder() {
+  echo -n "* Create package folder: "
+  if [ ! -d $PKG_FOLDER ]; then
+    mkdir $PKG_FOLDER
+    if [ $? -eq 0 ]; then
+      echo -e "\e[1;32mOK\e[0;0m"
+    else
+      echo -e "\e[1;32mFail\e[0;0m"
+      echo -e "\e[1;31m\n[ERROR] Fail to create package folder.\e[0;0m"
+      exit 1
+    fi
+  else
+    echo -e "\e[1;33mAlready Exist\e[0;0m"
+  fi
+}
+
 # create bin folder
 create_bin_folder () {
-  bin_folder="usr/bin"
+  bin_folder=$PKG_FOLDER/usr/bin
 
   echo -n "* Create command folder: "
   if [[ ! -d $bin_folder ]]; then
@@ -171,6 +207,62 @@ create_bin_folder () {
       echo -e "\e[1;32mOK\e[0;0m"
     else
       echo -e "\e[1;31mFail\e[0;0m"
+      echo -e "\e[1;31m\n[ERROR] Fail to create command folder.\e[0;0m"
+      exit 1
+    fi
+  else
+    echo -e "\e[1;33mAlready Exist\e[0;0m"
+  fi
+}
+
+# create control file
+create_control_file () {
+  control_file=$DEBIAN_FOLDER/control
+
+  echo -n "* Create control file: "
+  touch $control_file
+  if [ $? -ne 0 ]; then
+    echo -e "\e[1;31mFail\e[0;0m"
+    echo -e "\e[1;31m\n[ERROR] Fail to create control file.\e[0;0m"
+    exit 1
+  else
+    echo "Package: $PKG_NAME" > $control_file
+    echo "Version: $PKG_VERSION" >> $control_file
+    echo "Architecture: $PKG_ARCHITECTURE" >> $control_file
+    echo "Maintainer: luna-negra <anonymous@mail.non>" >> $control_file
+    echo "Description: Debian package for USB Docker Authentication System." >> $control_file
+    echo -e "\e[1;32mOK\e[0;0m"
+  fi
+}
+
+# create config folder
+create_config_folder () {
+  echo -n "* Create config folder: "
+  if [[ ! -d $CONFIG_FOLDER ]]; then
+    mkdir -p $CONFIG_FOLDER
+    if [ $? -eq 0 ]; then
+      echo -e "\e[1;32mOK\e[0;0m"
+    else
+      echo -e "\e[1;33mFail\e[0;0m"
+      echo -e "\e[1;31m\n[ERROR] Fail to create config folder.\e[0;0m"
+      exit 1
+    fi
+  else
+    echo -e "\e[1;33mAlready Exist\e[0;0m"
+  fi
+}
+
+# create DEBIAN folder
+create_debian_folder () {
+  echo -n "* Create DEBIAN folder: "
+  if [[ ! -d $DEBIAN_FOLDER ]]; then
+    mkdir $DEBIAN_FOLDER
+    if [ $? -eq 0 ]; then
+      echo -e "\e[1;32mOK\e[0;0m"
+    else
+      echo -e "\e[1;33mFail\e[0;0m"
+      echo -e "\e[1;31m\n[ERROR] Fail to create DEBIAN folder.\e[0;0m"
+      exit 1
     fi
   else
     echo -e "\e[1;33mAlready Exist\e[0;0m"
@@ -180,7 +272,7 @@ create_bin_folder () {
 # create log path
 create_logfile () {
   echo "* Create Logfile"
-  LOG_PATH=var/log/udas/
+  LOG_PATH=$PKG_FOLDER/var/log/udas/
   LOG_FILE=udas.log
   LOG=$LOG_PATH$LOG_FILE
 
@@ -191,7 +283,7 @@ create_logfile () {
       echo -e "\e[1;32mSuccess\e[0;0m"
     else
       echo -e "\e[1;31mFail\e[0;0m"
-      echo -e "\e[1;31m\n[ERROR] Fail to create folder for log file."
+      echo -e "\e[1;31m\n[ERROR] Fail to create folder.\e[0;0m"
       exit 1
     fi
   else
@@ -286,6 +378,13 @@ main () {
   echo "[Engine On]"
   create_bin_folder
   create_logfile
+  create_config_folder
+  copy_config_file
+  create_debian_folder
+  create_control_file
+
+  echo ""
+  echo "[Taxing to Runway 00]"
   check_activate_pyvenv
   if [ $? -eq 1 ]; then
     activate_pyvenv
@@ -293,7 +392,7 @@ main () {
   install_requirements
 
   echo ""
-  echo "[START COMPILE]"
+  echo "[Take Off]"
   compile_c_source
   compile_python_source
 

@@ -1,7 +1,7 @@
 # set variables for compile
 CC = gcc
 CFLAG =
-TARGET_PATH = ../../usr/bin
+TARGET_PATH = ../../udas-0.0-0-amd64/usr/bin
 TARGET_FILE_DETECTOR = udas_detector
 TARGET_FILE_UDAS = udas
 TARGET_UDAS = $(TARGET_PATH)/$(TARGET_FILE_UDAS)

@@ -1,8 +1,6 @@
 *
 !.gitignore
-!etc/
-!etc/udas
-!etc/udas/config.ini
+!config.ini
 !src/
 !create_pkg.sh
 !src/c/

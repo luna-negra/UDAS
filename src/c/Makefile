@@ -1,7 +1,7 @@
 # set variables for compile
 CC = gcc
-CFLAG = -O2
-TARGET_PATH = /usr/bin
+CFLAG =
+TARGET_PATH = ../../usr/bin
 TARGET_FILE_DETECTOR = udas_detector
 TARGET_FILE_UDAS = udas
 TARGET_UDAS = $(TARGET_PATH)/$(TARGET_FILE_UDAS)
@@ -13,6 +13,9 @@ SOURCE_UDAS = udas.c
 
 # set targets
 all: $(TARGET_UDAS) $(TARGET_DETECTOR)
+
+${TARGET_PATH}: 
+	mkdir -p ${TARGET_PATH}
 
 # set compile process
 $(TARGET_UDAS): $(SOURCE_COMMON) $(SOURCE_UDAS) | $(TARGET_PATH)

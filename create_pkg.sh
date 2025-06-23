@@ -10,6 +10,7 @@ CONFIG_FOLDER=$PKG_FOLDER/etc/udas/config
 DEBIAN_FOLDER=$PKG_FOLDER/DEBIAN
 LIBRARY_NAME="libusb-1.0.0-dev"
 LIBRARY_VERSION=2:1.0.27-1
+UDEV_RULE_FOLDER=$PKG_FOLDER/etc/udev/rules.d
 
 
 # activate pyvenv
@@ -37,17 +38,16 @@ check_activate_pyvenv () {
   return 0;
 }
 
-# check root or sudo privilege.
-# return 0 if there is issue with privilege.
-check_privilege () {
-  echo -n "* Check privilege: "
-  if [ "$EUID" -ne 0 ]; then
-    echo -e "\e[1;31mNot Authorized."
-    echo -e "\n[ERROR]\nYou have to run this command with root or sudo privilege.\e[0;0m\n"
-    exit 1;
+# check config file
+check_config_file () {
+  echo -n "* Check config file: "
+  if [[ ! -e config.ini ]]; then
+    echo -e "\e[1;31mNot Exist\e[0;0m"
+    echo -e "\e[1;31m\n[ERROR] File 'config.ini' is missing.\n\e[0;0m"
+    exit 1
+  else
+    echo -e "\e[1;32mChecked\e[0;0m"
   fi
-
-  echo -e "\e[1;32mAuthorized\e[0;0m"
 }
 
 # check tools to compile source codes.
@@ -106,7 +106,7 @@ check_source_python () {
   echo "* Check Python source files"
   for file in ${PYTHON_SOURCE_LIST[@]}; do
     echo -n "  - $file: "
-    if [[ ! -e $PYTHON_SOURCE_PATH$PYTHON_SOURCE_LIST ]]; then
+    if [[ ! -e $PYTHON_SOURCE_PATH$file ]]; then
       echo -e "\e[1;31mNot Exist\e[0;0m"
       echo -e "\e[1;31m\n[ERROR] File $file is not exist. Stop creating package.\n\e[0;0m"
       exit 1
@@ -114,6 +114,18 @@ check_source_python () {
       echo -e "\e[1;32mchecked\e[0;0m"
     fi
     done
+}
+
+# check source code of scripts
+check_source_script () {
+  echo -n "* Check scripts files: "
+  if [[ ! -e postinst ]]; then
+    echo -e "\e[1;31mNot Exist\e[0;0m"
+    echo -e "\e[1;31m\n[ERROR] File $file is not exist. Stop creating package.\n\e[0;0m"
+    exit 1
+  else
+    echo -e "\e[1;32mchecked\e[0;0m"
+  fi
 }
 
 # compile_c
@@ -175,6 +187,22 @@ copy_config_file () {
     echo -e "\e[1;31m\n[ERROR] Fail to copy config file to config folder.\n\e[0;0m"
     exit 1
   else
+    echo -e "\e[1;32mOK\e[0;0m"
+  fi
+}
+
+# copy postinst scripts
+copy_scripts () {
+  echo "* Copy script files"
+
+  echo -n "  - postinst: "
+  cp postinst $PKG_FOLDER/DEBIAN;
+  if [ $? -ne 0 ]; then
+    echo -e "\e[1;31mFail\e[0;0m"
+    echo -e "\e[1;31m\n[ERROR] Fail to copy scripts for post installation\n\e[0;0m"
+    exit 1
+  else
+    chmod 755 $PKG_FOLDER/DEBIAN/postinst
     echo -e "\e[1;32mOK\e[0;0m"
   fi
 }
@@ -316,6 +344,42 @@ create_logfile () {
   return 0
 }
 
+# create udev rule files: 644
+create_rule_files () {
+  RULE_FILE_LIST=("99-udas.blacklist.rules" "99-udas.custom.rules" "99-udas.default.rules")
+
+  echo "* Create udev rule files"
+  for file in ${RULE_FILE_LIST[@]}; do
+    echo -n "  - $file: "
+    touch $UDEV_RULE_FOLDER/$file
+    if [ $? -ne 0 ]; then
+      echo -e "\e[1;31mFail\e[0;0m"
+      echo -e "\e[1;31m\n[ERROR] Fail to create $file.\n\e[0;0m"
+      exit 1
+    fi
+      echo -e "\e[1;32mOK\e[0;0m"
+    done
+
+  echo "ACTION==\"add\", SUBSYSTEM==\"block\" ENV{UDISKS_IGNORE}!="0" ENV{UDISKS_IGNORE}=1" > $UDEV_RULE_FOLDER/${RULE_FILE_LIST[2]}
+}
+
+# create udev rule folder
+create_rule_folder () {
+  echo -n "* Create udev rule folder: "
+  if [[ ! -d $UDEV_RULE_FOLDER ]]; then
+    mkdir -p $UDEV_RULE_FOLDER
+    if [ $? -eq 0 ]; then
+      echo -e "\e[1;32mOK\e[0;0m"
+    else
+      echo -e "\e[1;33mFail\e[0;0m"
+      echo -e "\e[1;31m\n[ERROR] Fail to create udev rule folder.\e[0;0m"
+      exit 1
+    fi
+  else
+    echo -e "\e[1;33mAlready Exist\e[0;0m"
+  fi
+}
+
 # install build-essential
 install_build_essential () {
   echo -n "  * Install build-essential: "
@@ -361,14 +425,14 @@ install_requirements () {
 main () {
   clear;
   echo "[Pre-Flight Check]"
-  check_privilege
   check_source_c
   check_source_python
+  check_source_script
+  check_config_file
   check_build_essential
   if [[ $? -ne 0 ]]; then
     install_build_essential
   fi
-
   check_library
   if [[ $? -ne 0 ]]; then
     install_libusb
@@ -380,11 +444,14 @@ main () {
   create_logfile
   create_config_folder
   copy_config_file
+  create_rule_folder
+  create_rule_files
   create_debian_folder
   create_control_file
+  copy_scripts
 
   echo ""
-  echo "[Taxing to Runway 00]"
+  echo "[Taxing to Runway 09]"
   check_activate_pyvenv
   if [ $? -eq 1 ]; then
     activate_pyvenv

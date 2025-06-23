@@ -1,5 +1,6 @@
 *
 !.gitignore
+!postinst
 !config.ini
 !src/
 !create_pkg.sh

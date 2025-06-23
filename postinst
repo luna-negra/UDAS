@@ -1,0 +1,32 @@
+#!/bin/bash
+
+main () {
+  BPASSWD=f5d7d46a620813c434023a2e5c5453ff735153d51ddbd5863d32c2f2fa63423a4772e09b3d9d3400054234f4cf9bb670884771529ebb35252c27c5adaed6c0ed
+
+  echo ""
+  echo "[ UDAS ]"
+  echo ""
+  echo "Thanks you for installing UDAS - USB Docking Authentication System."
+  echo "Before using UDAS, please set the password by following guidance below."
+  echo ""
+  echo "Password will be used,"
+  echo " - Register newly connected USB as a whitelist"
+  echo " - open UDAS GUI program to management"
+  echo ""
+  echo -e "\e[1;33mDo not skip this process\e[0;0m"
+  echo -n "* UDAS Password: "
+  read -s password
+
+  enc_password=`echo -n udas::$password::2abu | sha512sum | awk '{print $1}'`
+  udas set passwd --old-password=$BPASSWD --new-password=$enc_password
+  if [ $? -ne 0 ]; then
+    echo -e "\e[1;31m\n[ERROR] Fail to change Password.\e[0;0m"
+    exit 1
+  fi
+
+  echo -e "\nSuccessfully update UDAS password."
+  echo ""
+}
+
+# execute main function
+main

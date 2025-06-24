@@ -1,5 +1,11 @@
 *
 !.gitignore
+!postinst
+!config.ini
+!src/
+!create_pkg.sh
+!src/c/
+!src/c/Makefile
 !src/c/udas.*
 !src/c/udas_common.*
 !src/c/udas_detector.*
@@ -7,5 +13,4 @@
 !src/python/udas/
 !src/python/udas/*.py
 !src/python/*.py
-!config/
-!config/config.ini
+!src/python/udas/requirements.txt

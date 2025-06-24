@@ -1,0 +1,29 @@
+# set variables for compile
+CC = gcc
+CFLAG =
+TARGET_PATH = ../../udas-0.0-0-amd64/usr/bin
+TARGET_FILE_DETECTOR = udas_detector
+TARGET_FILE_UDAS = udas
+TARGET_UDAS = $(TARGET_PATH)/$(TARGET_FILE_UDAS)
+TARGET_DETECTOR = $(TARGET_PATH)/$(TARGET_FILE_DETECTOR)
+
+SOURCE_COMMON = udas_common.c
+SOURCE_DETECTOR = udas_detector.c
+SOURCE_UDAS = udas.c
+
+# set targets
+all: $(TARGET_UDAS) $(TARGET_DETECTOR)
+
+${TARGET_PATH}: 
+	mkdir -p ${TARGET_PATH}
+
+# set compile process
+$(TARGET_UDAS): $(SOURCE_COMMON) $(SOURCE_UDAS) | $(TARGET_PATH)
+	$(CC) $(CFLAG) -o $(TARGET_UDAS) $(SOURCE_UDAS) $(SOURCE_COMMON)
+
+$(TARGET_DETECTOR): $(SOURCE_COMMON) $(SOURCE_UDAS) | $(TARGET_PATH)
+	$(CC) $(CFLAG) -o $(TARGET_DETECTOR) $(SOURCE_DETECTOR) $(SOURCE_COMMON) -lusb-1.0
+
+clean:
+	rm -f $(TARGET_UDAS)
+	rm -f $(TARGET_DETECTOR)

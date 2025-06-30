@@ -98,7 +98,7 @@ check_libxcb_cursor() {
 # check source code of C
 check_source_c () {
   C_SOURCE_FOLDER="src/c/"
-  C_SOURCE_LIST=("Makefile" "udas.c" "udas.h" "udas_common.c" "udas_common.h" "das_detector.c" "udas_detector.h")
+  C_SOURCE_LIST=("Makefile" "udas.c" "udas.h" "udas_common.c" "udas_common.h" "das_detector.c" "udas_detector.h", "udas_listener.c", "udas_listener.h")
 
   echo "* Check C source files"
   for file in ${C_SOURCE_LIST[@]}; do

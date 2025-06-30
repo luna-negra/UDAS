@@ -9,6 +9,7 @@
 !src/c/udas.*
 !src/c/udas_common.*
 !src/c/udas_detector.*
+!src/c/udas_listener.*
 !src/python/
 !src/python/udas/
 !src/python/udas/*.py

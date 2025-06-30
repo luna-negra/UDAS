@@ -1,5 +1,6 @@
 #include "./udas_common.h"
 #include "./udas_detector.h"
+#include "./udas_listener.h"
 
 
 char * APP_NAME = "UDAS_DETECTOR";
@@ -84,26 +85,6 @@ USB_INFO get_usb_dev(libusb_device * device, libusb_device_descriptor * desc)
     // close libusb.
     libusb_close(handler);
     return usb_info;
-}
-
-int get_blacklist_setting()
-{
-    FILE * config_file = fopen(CONFIG_FILE_PATH, "r");
-    if (config_file == NULL) return 0;
-
-    char buffer[256];
-    while (fgets(buffer, sizeof(buffer), config_file) != NULL)
-    {
-        if (strncmp(buffer, "blacklist", strlen("blacklist")) == 0)
-        {
-            char * token = strtok(buffer, "=");
-            token = strtok(NULL, "=");
-            if (strncmp(token, "1", 1) == 0) return 1;
-            break;
-        }
-    }
-
-    return 0;
 }
 
 int register_device(USB_INFO * usb_info, int blacklist)
@@ -229,66 +210,92 @@ void * call_gui_alert_thread(USB_INFO * usb_info)
         logger("WARNING", APP_NAME, "Process for the same USB storage is already Running.");
         return NULL;
     }
-
     logger("INFO", APP_NAME, "Start calling subprocess for udas_alert.");
 
-    // create child process for udas_alert
-    pid_t child_proc = fork();
-    if (child_proc == -1)
+    // create socket
+    int socket_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
+    if (socket_fd == -1)
     {
-        logger("ERROR", APP_NAME, "Fail to create subprocess.");
+        logger("ERROR", APP_NAME, "Fail to create socket");
         return NULL;
     }
 
-    // child process for udas_alert
-    char idVendor[64], idProduct[64], serial[64], manufacturer[64], product[64];
-    logger("INFO", APP_NAME, "Asking about new USB storage...");
-    snprintf(idVendor, sizeof(idVendor), "--idVendor=%04x", usb_info->manufacture_id);
-    snprintf(idProduct, sizeof(idProduct), "--idProduct=%04x", usb_info->product_id);
-    snprintf(serial, sizeof(serial), "--serial=%s", usb_info->serialnum);
-    snprintf(manufacturer, sizeof(manufacturer), "--manufacturer=%s", usb_info->manufacture);
-    snprintf(product, sizeof(product), "--product=%s", usb_info->product);
+    logger("DEBUG", APP_NAME, "create socket to comm with listener");
 
-    if (child_proc == 0)
+    // create address
+    struct sockaddr_un addr;
+    addr.sun_family = AF_LOCAL;
+    strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
+
+    // connect (SYN)
+    if (connect(socket_fd, (struct sockaddr *)&addr, (socklen_t)sizeof(addr)) == -1)
     {
-        execlp("udas_alert", "udas_alert", idVendor, idProduct, serial, manufacturer, product, NULL);
-        
-        // exit child process with error code if fail to execute command.
-        exit(-2);
+        logger("ERROR", APP_NAME, "Fail to connect listener.");
+        close(socket_fd);
+        return NULL;
     }
-    else
+
+    char buffer[BUFFER_SIZE] = {'\0'};
+    if (read(socket_fd, buffer, BUFFER_SIZE) < 0)
     {
-        // parent process
-        int status, exit_code;
-        waitpid(child_proc, &status, 0);
+        logger("ERROR", APP_NAME, "Fail to get a ACK from listener");
+        return NULL;
+    }
 
-        if (WIFEXITED(status))
+    logger("INFO", APP_NAME, buffer);
+    memset(buffer, '\0', BUFFER_SIZE);
+    
+    // create command for udas_alert
+    char idVendor[64], idProduct[64], serial[64], manufacturer[64], product[64];
+    logger("INFO", APP_NAME, "Creating information about new USB storage...");
+    snprintf(idVendor, sizeof(idVendor), "--idVendor=%04x ", usb_info->manufacture_id);
+    snprintf(idProduct, sizeof(idProduct), "--idProduct=%04x ", usb_info->product_id);
+    snprintf(serial, sizeof(serial), "--serial=%s ", usb_info->serialnum);
+    snprintf(manufacturer, sizeof(manufacturer), "--manufacturer=%s ", usb_info->manufacture);
+    snprintf(product, sizeof(product), "--product=%s ", usb_info->product);
+
+    strncpy(buffer, "udas_alert ", strlen("udas_alert "));
+    strncat(buffer, idVendor, strlen(idVendor));
+    strncat(buffer, idProduct, strlen(idProduct));
+    strncat(buffer, serial, strlen(serial));
+    strncat(buffer, manufacturer, strlen(manufacturer));
+    strncat(buffer, product, strlen(product));
+
+    // send udas_alert command to listener
+    if (write(socket_fd, buffer, BUFFER_SIZE) <= 0)
+    {
+        logger("ERROR", APP_NAME, "fail to send signal to listener to execute alert.");
+        close(socket_fd);
+        return NULL;
+    }
+    memset(buffer, '\0', BUFFER_SIZE);
+    logger("INFO", APP_NAME, "send signal to listener to execute alert.");
+
+    // get a result from listener.
+    if (read(socket_fd, buffer, BUFFER_SIZE) > 0) 
+    {
+        if (strncmp(buffer, "[WARNING]", strlen("[WARNING]")) == 0) logger("WARNING", APP_NAME, strtok(buffer, "[WARNING]"));
+        else if (strncmp(buffer, "[ERROR]", strlen("[ERROR]")) == 0) logger("ERROR", APP_NAME, strtok(buffer, "[ERROR]"));
+        else 
         {
-            exit_code = WEXITSTATUS(status);
-
-            // 0: Success, 255: Cancel
-            if (exit_code == 0)
+            if (strncmp(buffer, "REGISTER WHITELIST", strlen("REGISTER WHITELIST")) == 0)
             {
-                (register_device(usb_info, 0) == EXIT_SUCCESS) ?
+                (register_device(usb_info, 0) == EXIT_SUCCESS)?
                 logger("INFO", APP_NAME, "Success to register new USB storage as whitelist."):
                 logger("ERROR", APP_NAME, "Fail to register new USB storage as whitelist.");
             }
-            else if (exit_code == 253) logger("ERROR", APP_NAME, "Config file is not exist.");
-            else if (exit_code == 254) logger("ERROR", APP_NAME, "Can not find the udas_alert."); 
-            else 
+            else if (strncmp(buffer, "REGISTER BLACKLIST", strlen("REGISTER BLACKLIST")) == 0)
             {
-                int blacklist = get_blacklist_setting();                
-                if (blacklist == 0) logger("INFO", APP_NAME, "New USB storage is not registered as whitelist.");
-                else
-                {
-                    (register_device(usb_info, 1) == EXIT_SUCCESS) ?
-                    logger("INFO", APP_NAME, "New USB storage is registered as blacklist."):
-                    logger("ERROR", APP_NAME, "Fail to register new USB storage as blacklist.");
-                }                
+                (register_device(usb_info, 1) == EXIT_SUCCESS)?
+                logger("INFO", APP_NAME, "New USB storage is registered as blacklist."):
+                logger("ERROR", APP_NAME, "Fail to register new USB storage as blacklist.");
             }
+            else logger("INFO", APP_NAME, buffer);
         }
-        else if (WIFSIGNALED(status)) logger("ERROR", APP_NAME, "udas_alert is terminated by signal.");
     }
+    
+    close(socket_fd);
+    logger("DEBUG", APP_NAME, "close socket communicating with listener.");
     return NULL;
 }
 

@@ -25,14 +25,12 @@ int get_blacklist_setting()
 int get_cmd_arg(char ** store, char * buffer)
 {
     int i = 0;
-    printf("BUFFER: %s\n", buffer);
     *(store + i++) = strtok(buffer, " ");
 
     for (i ; i < CMD_ARG_SIZE; i++)
     {
         char * tmp = strtok(NULL, " ");
         *(store + i) = tmp;
-        printf("%s\n", *(store + i ));
     }
 
     return EXIT_SUCCESS;

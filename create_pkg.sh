@@ -211,13 +211,24 @@ copy_scripts () {
   echo "* Copy script files"
 
   echo -n "  - postinst: "
-  cp postinst $PKG_FOLDER/DEBIAN;
+  cp postinst $PKG_FOLDER/DEBIAN
   if [ $? -ne 0 ]; then
     echo -e "\e[1;31mFail\e[0;0m"
     echo -e "\e[1;31m\n[ERROR] Fail to copy scripts for post installation\n\e[0;0m"
     exit 1
   else
     chmod 755 $PKG_FOLDER/DEBIAN/postinst
+    echo -e "\e[1;32mOK\e[0;0m"
+  fi
+
+  echo -n "  - prerm: "
+  cp prerm $PKG_FOLDER/DEBIAN
+  if [ $? -ne 0 ]; then
+    echo -e "\e[1;31mFail\e[0;0m"
+    echo -e "\e[1;31m\n[ERROR] Fail to copy scripts for pre uninstallation\n\e[0;0m"
+    exit 1
+  else
+    chmod 755 $PKG_FOLDER/DEBIAN/prerm
     echo -e "\e[1;32mOK\e[0;0m"
   fi
 }

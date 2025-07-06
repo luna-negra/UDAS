@@ -154,7 +154,7 @@ def get_rule_num(is_white: bool = True) -> str:
 
 def get_service_status() -> dict:
     ret_value = {"is_running": "ERROR", "start_dt": "ERROR",  "uptime": "ERROR"}
-    run_result = run("systemctl status docker | head -n 3 | tail -n 1", stdout=PIPE, stderr=PIPE, shell=True)
+    run_result = run("systemctl status udas | head -n 3 | tail -n 1", stdout=PIPE, stderr=PIPE, shell=True)
     if run_result.returncode == 0:
         tmp = run_result.stdout.decode(ENCODING).split()
         ret_value["is_running"] = f"{tmp[2].strip('()')} ({tmp[1]})"

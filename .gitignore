@@ -1,7 +1,7 @@
 *
 !.gitignore
-!postinst
-!prerm
+!src/scripts/postinst
+!src/scripts/prerm
 !config.ini
 !src/
 !create_pkg.sh
@@ -16,3 +16,5 @@
 !src/python/udas/*.py
 !src/python/*.py
 !src/python/udas/requirements.txt
+!src/scripts/
+!src/scripts/*

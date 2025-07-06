@@ -350,7 +350,7 @@ int set_blacklist(FILE * config_file, FILE * config_file_tmp, char * blacklist)
 
 int set_ns_policy(FILE * config_file, FILE * config_file_tmp, char * allow_ns)
 {
-	logger("INFO", APP_NAME, "Start update allowing non_serial number setting.");
+	logger("INFO", APP_NAME, "Start update non_serial policy setting.");
 
 	/* udas set allow_ns on, udas set allow_ns off*/
 	int result = EXIT_FAILURE;
@@ -376,10 +376,10 @@ int set_ns_policy(FILE * config_file, FILE * config_file_tmp, char * allow_ns)
 	if (result == EXIT_SUCCESS)
 	{
 		char log[256] = "";
-		snprintf(log, sizeof(log), "Succeed to update allowing non_serial number setting '%s'.", allow_ns);
+		snprintf(log, sizeof(log), "Succeed to update non_serial policy setting '%s'.", allow_ns);
 		logger("INFO", APP_NAME, log);
 	}
-	else logger("WARNING", APP_NAME, "Failed to update allowing non_serial number setting.");
+	else logger("WARNING", APP_NAME, "Failed to update non_serial policy setting.");
 	return result;
 }
 

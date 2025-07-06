@@ -10,6 +10,7 @@ CONFIG_FOLDER=$PKG_FOLDER/etc/udas/config
 DEBIAN_FOLDER=$PKG_FOLDER/DEBIAN
 LIBUSB_NAME="libusb-1.0.0-dev"
 LIBUSB_VERSION=2:1.0.27-1
+SERVICE_FOLDER=$PKG_FOLDER/usr/lib/systemd/system/
 UDEV_RULE_FOLDER=$PKG_FOLDER/etc/udev/rules.d
 
 
@@ -133,14 +134,20 @@ check_source_python () {
 
 # check source code of scripts
 check_source_script () {
-  echo -n "* Check scripts files: "
-  if [[ ! -e postinst ]]; then
-    echo -e "\e[1;31mNot Exist\e[0;0m"
-    echo -e "\e[1;31m\n[ERROR] File $file is not exist. Stop creating package.\n\e[0;0m"
-    exit 1
-  else
-    echo -e "\e[1;32mchecked\e[0;0m"
-  fi
+  SCRIPT_SOURCE_PATH="src/scripts/"
+  SCRIPT_SOURCE_LIST=("postinst" "prerm" "udas_detector.service" "udas_listener.service")
+
+  echo "* Check Script source files"
+  for file in ${SCRIPT_SOURCE_LIST[@]}; do
+    echo -n " - $file: "
+    if [[ ! -e $SCRIPT_SOURCE_PATH$file ]]; then
+      echo -e "\e[1;31mNot Exist\e[0;0m"
+      echo -e "\e[1;31m\n[ERROR] File $file is not exist. Stop creating package.\n\e[0;0m"
+      exit 1
+    else
+      echo -e "\e[1;32mchecked\e[0;0m"
+    fi
+    done
 }
 
 # compile_c
@@ -208,10 +215,12 @@ copy_config_file () {
 
 # copy postinst scripts
 copy_scripts () {
+  SCRIPT_SOURCE_PATH="src/scripts"
+
   echo "* Copy script files"
 
   echo -n "  - postinst: "
-  cp postinst $PKG_FOLDER/DEBIAN
+  cp $SCRIPT_SOURCE_PATH/postinst $PKG_FOLDER/DEBIAN
   if [ $? -ne 0 ]; then
     echo -e "\e[1;31mFail\e[0;0m"
     echo -e "\e[1;31m\n[ERROR] Fail to copy scripts for post installation\n\e[0;0m"
@@ -222,7 +231,29 @@ copy_scripts () {
   fi
 
   echo -n "  - prerm: "
-  cp prerm $PKG_FOLDER/DEBIAN
+  cp $SCRIPT_SOURCE_PATH/prerm $PKG_FOLDER/DEBIAN
+  if [ $? -ne 0 ]; then
+    echo -e "\e[1;31mFail\e[0;0m"
+    echo -e "\e[1;31m\n[ERROR] Fail to copy scripts for pre uninstallation\n\e[0;0m"
+    exit 1
+  else
+    chmod 755 $PKG_FOLDER/DEBIAN/prerm
+    echo -e "\e[1;32mOK\e[0;0m"
+  fi
+
+  echo -n "  - udas_detector.service"
+  cp $SCRIPT_SOURCE_PATH/udas_detector.service $SERVICE_FOLDER
+  if [ $? -ne 0 ]; then
+    echo -e "\e[1;31mFail\e[0;0m"
+    echo -e "\e[1;31m\n[ERROR] Fail to copy scripts for pre uninstallation\n\e[0;0m"
+    exit 1
+  else
+    chmod 755 $PKG_FOLDER/DEBIAN/prerm
+    echo -e "\e[1;32mOK\e[0;0m"
+  fi
+
+  echo -n "  - udas_listener.service"
+  cp $SCRIPT_SOURCE_PATH/udas_listener.service $SERVICE_FOLDER
   if [ $? -ne 0 ]; then
     echo -e "\e[1;31mFail\e[0;0m"
     echo -e "\e[1;31m\n[ERROR] Fail to copy scripts for pre uninstallation\n\e[0;0m"
@@ -406,6 +437,23 @@ create_rule_folder () {
   fi
 }
 
+# create service folder
+create_service_folder () {
+  echo -n "* Create service folder: "
+  if [[ ! -d $SERVICE_FOLDER ]]; then
+    mkdir -p $SERVICE_FOLDER
+    if [ $? -eq 0 ]; then
+      echo -e "\e[1;32mOK\e[0;0m"
+    else
+      echo -e "\e[1;33mFail\e[0;0m"
+      echo -e "\e[1;31m\n[ERROR] Fail to create udev rule folder.\e[0;0m"
+      exit 1
+    fi
+  else
+    echo -e "\e[1;33mAlready Exist\e[0;0m"
+  fi
+}
+
 # install requirements
 install_requirements () {
   echo -n "* Install python packages: "
@@ -418,13 +466,6 @@ install_requirements () {
     echo -e "\e[1;32mOK\e[0;0m"
   fi
 }
-
-# remove trash
-remove_trash () {
-  rm -rf src/python/build
-  rm -rf src/python/*.spec
-}
-
 
 # main function
 main () {
@@ -470,6 +511,7 @@ main () {
   create_rule_files
   create_debian_folder
   create_control_file
+  create_service_folder
   copy_scripts
 
   echo ""
@@ -484,7 +526,6 @@ main () {
   echo "[Take Off]"
   compile_c_source
   compile_python_source
-  remove_trash
 
   echo ""
   echo "COMPLETE Process"

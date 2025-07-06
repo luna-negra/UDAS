@@ -3,6 +3,20 @@
 home_udas_folder=/home/$SUDO_USER/udas
 
 
+enable_service () {
+  systemctl enable udas_detector.service 2> /dev/null
+  if [[ ! "$SUDO_USER" ]]; then
+    systemctl enable udas_listener.service 2> /dev/null
+  fi
+}
+
+start_service () {
+  systemctl start udas.service 2> /dev/null
+  if [[ ! "$SUDO_USER" ]]; then
+    systemctl start udas_listener.service 2> /dev/null
+  fi
+}
+
 set_password() {
   BPASSWD=f5d7d46a620813c434023a2e5c5453ff735153d51ddbd5863d32c2f2fa63423a4772e09b3d9d3400054234f4cf9bb670884771529ebb35252c27c5adaed6c0ed
 
@@ -31,8 +45,8 @@ set_password() {
   echo ""
 }
 
-move_gui_exe (){
-  echo -n "You can find GUI management program at "
+move_gui_exe () {
+  echo -n "[INFO] You can find GUI management program at "
   if [[ "$SUDO_USER" != "" ]];then
     mkdir -p $home_udas_folder
     chmod 700 $home_udas_folder
@@ -42,24 +56,37 @@ move_gui_exe (){
     mv /usr/bin/udas_gui $home_udas_folder
     chmod 700 -R $home_udas_folder/udas_gui
     chown $SUDO_USER:$SUDO_USER $home_udas_folder/udas_gui
-
-    # move udas_listener
-    mv /usr/bin/udas_listener $home_udas_folder
-    chmod 700 -R $home_udas_folder/udas_listener
-    chown $SUDO_USER:$SUDO_USER -R $home_udas_folder/udas_listener    
-    echo "'$home_udas_folder'"
+    echo "'$home_udas_folder/udas_gui'"
 
   else
     chmod 700 /usr/bin/udas_gui
-    chmod 700 /usr/bin/udas_listener
-    echo "'/usr/bin/udas_gui/'"
+    echo "'/usr/bin/udas_gui'"
 
+  fi
+}
+
+move_user_daemon() {
+  if [[ "$SUDO_USER" ]]; then
+      mv /usr/lib/systemd/system/udas_listener.service /home/$SUDO_USER/.config/systemd/user/udas_listener.service
+      chown $SUDO_USER:$SUDO_USER /home/$SUDO_USER/.config/systemd/user/udas_listener.service
+      chmod 755 -R /home/$SUDO_USER/.config/systemd/user/udas_listener.service
   fi
 }
 
 main () {
   set_password
+  move_user_daemon
   move_gui_exe
+  enable_service
+  start_service
+
+  echo "[INFO] Please set enable and start user daemon."
+  echo ""
+  if [[ "$SUDO_USER" ]]; then
+    echo " - Command1 : systemctl --user enable udas_listener.service"
+    echo " - Command2 : systemctl --user start udas_listener.service"
+  fi
+  echo ""
 }
 
 # execute main function

@@ -1,0 +1,11 @@
+[Unit]
+Description=Detector for USB Docking Authentication System
+
+[Service]
+ExecStart=/usr/bin/udas_detector
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
+Alias=udas.service

@@ -6,6 +6,8 @@ from udas.udas_pytool import (QMainWindow,
                               change_blacklist,
                               change_loglevel,
                               clear_layout,
+                              control_user_daemon,
+                              control_service,
                               create_menubar,
                               get_rules,
                               get_rule_num,
@@ -106,6 +108,18 @@ class MainWindow(QMainWindow):
                                             label_height=height,
                                             button_width=button_width,)
         dialog.exec()
+
+    def __control_user_daemon(self, status: str):
+        cmd_result = control_user_daemon("stop" if "running" in status else "start")
+        if cmd_result.returncode == 0:
+            self.__settings()
+        return None
+
+    def __control_service(self, status: str):
+        cmd_result = control_service("stop" if "running" in status else "start")
+        if cmd_result.returncode == 0:
+            self.__settings()
+        return None
 
     def __create_menubar(self):
         # define menubar structure
@@ -264,7 +278,6 @@ class MainWindow(QMainWindow):
                                                 key="UPTIME",
                                                 value=service_data.get("uptime"))
 
-        ##
         # deamon widgets and layout
         label_daemon_preamble = custom_label(text="<b>Status of UDAS Listener Daemon</b>",
                                               width=WIDGET_MAIN_CONTENT_WIDTH,
@@ -286,7 +299,6 @@ class MainWindow(QMainWindow):
                                                 ratio=key_width,
                                                 key="UPTIME",
                                                 value=service_data2.get("uptime"))
-        ##
 
         layout_status = custom_box_layout(children=[label_status_preamble, layout_status_info], )
         layout_service = custom_box_layout(children=[label_service_preamble,
@@ -414,7 +426,7 @@ class MainWindow(QMainWindow):
     def __read_service_kpi_data(self, is_user_daemon: bool = False):
         service_data = get_service_status() if not is_user_daemon else get_user_daemon_status()
         return {
-            "is_running": service_data.get("is_running"),
+            "is_running": service_data.get("is_running") if "running" in service_data.get("is_running") else f'<b><font color="red">{service_data.get("is_running")}</font></b>',
             "start_dt": service_data.get("start_dt"),
             "uptime": service_data.get("uptime")
         }
@@ -445,7 +457,8 @@ class MainWindow(QMainWindow):
                                                            button_width=button_width,
                                                            button_text="OFF" if "running" in service_data.get("is_running") else "On",
                                                            button_style=BUTTON_GENERAL_STYLE,
-                                                           button_status_tip="Run or Stop UDAS Detecting Service...")
+                                                           button_status_tip="Run or Stop UDAS Detecting Service...",
+                                                           connect=partial(self.__control_service, status=service_data.get("is_running")))
 
         widget_layout_ctrl_service2 = CustomLabelWithButton(total_width=total_width,
                                                            height=height,
@@ -454,7 +467,8 @@ class MainWindow(QMainWindow):
                                                            button_width=button_width,
                                                            button_text="OFF" if "running" in service_data2.get("is_running") else "On",
                                                            button_style=BUTTON_GENERAL_STYLE,
-                                                           button_status_tip="Run or Stop UDAS Detecting Service...")
+                                                           button_status_tip="Run or Stop UDAS Listener Service...",
+                                                           connect=partial(self.__control_user_daemon, status=service_data2.get("is_running")))
 
         widget_layout_ctrl_blacklist = CustomLabelWithButton(total_width=total_width,
                                                             height=height,

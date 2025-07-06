@@ -68,6 +68,14 @@ def change_password(old_pw: str, new_pw:str) -> subprocess.CompletedProcess:
     command: str = f"pkexec udas set passwd --old-password={old_pw} --new-password={new_pw}"
     return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
 
+def control_user_daemon(cmd: str) -> subprocess.CompletedProcess:
+    command: str = f"systemctl --user {cmd} udas_listener.service"
+    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
+
+def control_service(cmd: str) -> subprocess.CompletedProcess:
+    command: str = f"pkexec systemctl {cmd} udas.service"
+    return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
+
 def clear_layout(widget):
     old_layout = widget.layout()
     if old_layout:

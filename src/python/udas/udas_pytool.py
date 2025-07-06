@@ -68,11 +68,11 @@ def change_password(old_pw: str, new_pw:str) -> subprocess.CompletedProcess:
     command: str = f"pkexec udas set passwd --old-password={old_pw} --new-password={new_pw}"
     return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
 
-def control_user_daemon(cmd: str) -> subprocess.CompletedProcess:
+def control_listener(cmd: str) -> subprocess.CompletedProcess:
     command: str = f"systemctl --user {cmd} udas_listener.service"
     return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
 
-def control_service(cmd: str) -> subprocess.CompletedProcess:
+def control_detector(cmd: str) -> subprocess.CompletedProcess:
     command: str = f"pkexec systemctl {cmd} udas.service"
     return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
 
@@ -160,7 +160,7 @@ def get_rule_num(is_white: bool = True) -> str:
         return result
     return "ERROR"
 
-def get_service_status() -> dict:
+def get_detector_status() -> dict:
     ret_value = {"is_running": "ERROR", "start_dt": "ERROR",  "uptime": "ERROR"}
     run_result = run("systemctl status udas | head -n 3 | tail -n 1", stdout=PIPE, stderr=PIPE, shell=True)
     if run_result.returncode == 0:
@@ -170,7 +170,7 @@ def get_service_status() -> dict:
         ret_value["uptime"] = f"{tmp[-3]} {tmp[-2]}" if "h" in tmp[-3] or "m" in tmp[-3] else f"{tmp[-2]}"
     return ret_value
 
-def get_user_daemon_status() -> dict:
+def get_listener_status() -> dict:
     ret_value = {"is_running": "ERROR", "start_dt": "ERROR", "uptime": "ERROR"}
     run_result = run("systemctl --user status udas_listener | head -n 3 | tail -n 1", stdout=PIPE, stderr=PIPE, shell=True)
     if run_result.returncode == 0:

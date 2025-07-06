@@ -10,6 +10,7 @@ from udas.udas_pytool import (QMainWindow,
                               get_rules,
                               get_rule_num,
                               get_service_status,
+                              get_user_daemon_status,
                               remove_registered_usb_info,
                               sys,)
 from udas.udas_custom_widget import (COLOR_SEPARATE_LINE,
@@ -37,7 +38,7 @@ DIALOG_PASSWORD_CHANGE_WIDTH: int = 500
 DIALOG_PASSWORD_CHANGE_HEIGHT: int = 200
 MAIN_WINDOW_TITLE: str = "USB Docking Authentication System"
 MAIN_WINDOW_WIDTH: int = 600
-MAIN_WINDOW_HEIGHT: int = 450
+MAIN_WINDOW_HEIGHT: int = 480
 WIDGET_SIDEBAR_WIDTH: int = 150
 WIDGET_SIDEBAR_HEIGHT: int = MAIN_WINDOW_HEIGHT
 WIDGET_SIDEBAR_STYLE: str = "border: 1px solid #333;"
@@ -213,6 +214,7 @@ class MainWindow(QMainWindow):
         # get KPI data.
         status_data: dict = self.__read_status_kpi_data()
         service_data: dict = self.__read_service_kpi_data()
+        service_data2: dict = self.__read_service_kpi_data(is_user_daemon=True)
 
         # set the size of widgets
         key_width: float = 0.5
@@ -262,11 +264,39 @@ class MainWindow(QMainWindow):
                                                 key="UPTIME",
                                                 value=service_data.get("uptime"))
 
+        ##
+        # deamon widgets and layout
+        label_daemon_preamble = custom_label(text="<b>Status of UDAS Listener Daemon</b>",
+                                              width=WIDGET_MAIN_CONTENT_WIDTH,
+                                              height=height)
+        label_daemon_status = custom_labels_kv(total_width=WIDGET_MAIN_CONTENT_WIDTH,
+                                                height=height,
+                                                ratio=key_width,
+                                                key="STATUS",
+                                                value=service_data2.get("is_running"),
+                                                align="center")
+        label_daemon_start = custom_labels_kv(total_width=WIDGET_MAIN_CONTENT_WIDTH,
+                                               height=height,
+                                               ratio=key_width,
+                                               key="START DATETIME",
+                                               value=service_data2.get("start_dt"),
+                                               align="center")
+        label_daemon_uptime = custom_labels_kv(total_width=WIDGET_MAIN_CONTENT_WIDTH,
+                                                height=height,
+                                                ratio=key_width,
+                                                key="UPTIME",
+                                                value=service_data2.get("uptime"))
+        ##
+
         layout_status = custom_box_layout(children=[label_status_preamble, layout_status_info], )
         layout_service = custom_box_layout(children=[label_service_preamble,
                                                      label_service_status,
                                                      label_service_start,
-                                                     label_service_uptime],)
+                                                     label_service_uptime,
+                                                     label_daemon_preamble,
+                                                     label_daemon_status,
+                                                     label_daemon_start,
+                                                     label_daemon_uptime,],)
         layout = custom_box_layout(children=[layout_status,
                                              custom_separate_line(color=COLOR_SEPARATE_LINE),
                                              layout_service],
@@ -381,8 +411,8 @@ class MainWindow(QMainWindow):
             "blacklist": get_rule_num(is_white=False),
         }
 
-    def __read_service_kpi_data(self):
-        service_data = get_service_status()
+    def __read_service_kpi_data(self, is_user_daemon: bool = False):
+        service_data = get_service_status() if not is_user_daemon else get_user_daemon_status()
         return {
             "is_running": service_data.get("is_running"),
             "start_dt": service_data.get("start_dt"),
@@ -395,6 +425,7 @@ class MainWindow(QMainWindow):
         # get data
         config = ConfigIni()
         service_data = self.__read_service_kpi_data()
+        service_data2 = self.__read_service_kpi_data(is_user_daemon=True)
 
         # set the size of widgets
         total_width = WIDGET_MAIN_CONTENT_WIDTH
@@ -413,6 +444,15 @@ class MainWindow(QMainWindow):
                                                            label_text="UDAS Service [On / Off]",
                                                            button_width=button_width,
                                                            button_text="OFF" if "running" in service_data.get("is_running") else "On",
+                                                           button_style=BUTTON_GENERAL_STYLE,
+                                                           button_status_tip="Run or Stop UDAS Detecting Service...")
+
+        widget_layout_ctrl_service2 = CustomLabelWithButton(total_width=total_width,
+                                                           height=height,
+                                                           ratio=0.7,
+                                                           label_text="UDAS user daemon Service [On / Off]",
+                                                           button_width=button_width,
+                                                           button_text="OFF" if "running" in service_data2.get("is_running") else "On",
                                                            button_style=BUTTON_GENERAL_STYLE,
                                                            button_status_tip="Run or Stop UDAS Detecting Service...")
 
@@ -467,6 +507,7 @@ class MainWindow(QMainWindow):
 
         layout = custom_box_layout(children=[label_settings_preamble,
                                              widget_layout_ctrl_service,
+                                             widget_layout_ctrl_service2,
                                              widget_layout_ctrl_allow_ns,
                                              widget_layout_ctrl_blacklist,
                                              widget_layout_ctrl_password,

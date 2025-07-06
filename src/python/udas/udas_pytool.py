@@ -159,7 +159,7 @@ def get_service_status() -> dict:
         tmp = run_result.stdout.decode(ENCODING).split()
         ret_value["is_running"] = f"{tmp[2].strip('()')} ({tmp[1]})"
         ret_value["start_dt"] = f"{tmp[5]} {tmp[6]} {tmp[7].strip(';')}"
-        ret_value["uptime"] = f"{tmp[-3]} {tmp[-2]}" if "h" in tmp[-3] else f"{tmp[-2]}"
+        ret_value["uptime"] = f"{tmp[-3]} {tmp[-2]}" if "h" in tmp[-3] or "m" in tmp[-3] else f"{tmp[-2]}"
     return ret_value
 
 def get_user_daemon_status() -> dict:
@@ -169,7 +169,7 @@ def get_user_daemon_status() -> dict:
         tmp = run_result.stdout.decode(ENCODING).split()
         ret_value["is_running"] = f"{tmp[2].strip('()')} ({tmp[1]})"
         ret_value["start_dt"] = f"{tmp[5]} {tmp[6]} {tmp[7].strip(';')}"
-        ret_value["uptime"] = f"{tmp[-3]} {tmp[-2]}" if "h" in tmp[-3] else f"{tmp[-2]}"
+        ret_value["uptime"] = f"{tmp[-3]} {tmp[-2]}" if "h" in tmp[-3] or "m" in tmp[-3] else f"{tmp[-2]}"
     return ret_value
 
 def remove_registered_usb_info(id_vendor: str,

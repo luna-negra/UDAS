@@ -98,7 +98,7 @@ int register_device(USB_INFO * usb_info, int blacklist)
     // create command to register new usb storage device to udev rule file
     if (snprintf(command,
             sizeof(command),
-            "udas td register %s --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=%s --product=%s",
+            "udas td register %s --idVendor=%04x --idProduct=%04x --serial=%s --manufacturer=\"%s\" --product=\"%s\"",
             reg_opt,
             usb_info->manufacture_id,
             usb_info->product_id,

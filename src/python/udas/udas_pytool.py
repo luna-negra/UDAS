@@ -39,10 +39,9 @@ ENCODING: str ="utf-8"
 CONFIG_PATH: str = "/etc/udas/config/config.ini"
 WHITELIST_PATH: str = "/etc/udev/rules.d/99-udas.custom.rules"
 RULE_REGEX = r'ACTION=="add", SUBSYSTEM=="block", ATTRS{idVendor}=="(?P<id_vendor>[A-z0-9]{4})", ATTRS{idProduct}=="(?P<id_product>[A-z0-9]{4})",.+, ENV{UDISKS_IGNORE}="(?P<ignore>[01])"'
-SERIAL_REGEX = r'ATTRS{serial}=="(?P<serial>[A-z0-9]+)"'
-MANUFACTURER_REGEX= r'ATTRS{manufacturer}=="(?P<manufacturer>[A-z0-9]+)"'
-PRODUCT_REGEX= r'ATTRS{product}=="(?P<product>[A-z0-9]+)"'
-
+SERIAL_REGEX = r'ATTRS{serial}=="(?P<serial>[A-z0-9]+)",'
+MANUFACTURER_REGEX= r'ATTRS{manufacturer}=="(?P<manufacturer>.*)", ATTRS{product}=='
+PRODUCT_REGEX= r'ATTRS{product}=="(?P<product>.*)",'
 
 def centralise_fixed(obj, width: int, height: int):
     screen = QScreen.availableGeometry(QApplication.primaryScreen())

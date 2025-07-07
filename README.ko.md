@@ -74,10 +74,10 @@ sudo dpkg -i udas-0.0.0-amd64.deb
 
 ![img_1.png](imgs/img_1.png)
 
-* GUI 화면에서 Main > 서비스 구동 여부 확인
+* GUI 화면에서 Main > 서비스 구동 여부 확인<br>
 ![img_2.png](imgs/img_2.png)
 
-* UDAS Detector 및 UDAS Listener 서비스가 구동 중인 경우, PC에 USB 저장 장치 연결 시 whitelist 등록 여부를 확인하는 메세지 창이 생성됩니다.
+* UDAS Detector 및 UDAS Listener 서비스가 구동 중인 경우, PC에 USB 저장 장치 연결 시 whitelist 등록 여부를 확인하는 메세지 창이 생성됩니다.<br>
 ![img_3.png](imgs/img_3.png)
 
 ### 4. 사용

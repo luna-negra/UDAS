@@ -75,10 +75,10 @@ sudo dpkg -i udas-0.0.0-amd64.deb
 
 ![img_1.png](imgs/img_1.png)
 
-* On the GUI screen, navigate to Main > Service and check the Status of Daemons.
+* On the GUI screen, navigate to Main > Service and check the Status of Daemons.<br>
 ![img_2.png](imgs/img_2.png)
 
-* If UDAS Detector and UDAS Listener services are running, a message window will appear asking to confirm whitelist registration when a USB storage device is connected to the PC.
+* If UDAS Detector and UDAS Listener services are running, a message window will appear asking to confirm whitelist registration when a USB storage device is connected to the PC.<br>
 ![img_3.png](imgs/img_3.png)
 
 ### 4. Usage
@@ -95,19 +95,19 @@ The GUI program is divided into the following four sections.<br>
 
 #### (1) Main
 The Main section displays the number of USB storage devices currently registered in Blacklist or Whitelist, 
-and the status of UDAS-related service daemons.
+and the status of UDAS-related service daemons.<br>
 ![img_4.png](imgs/img_4.png)
 
 * UDAS-related service daemons include Detector and Listener. 
-  If either of these services is not running, real-time detection of USB storage devices is not possible.
+  If either of these services is not running, real-time detection of USB storage devices is not possible.<br>
 ![img_5.png](imgs/img_5.png)
 
 #### (2) Management
-The Management section provides a list of USB storage devices registered in Blacklist or Whitelist and offers deletion functionality.
+The Management section provides a list of USB storage devices registered in Blacklist or Whitelist and offers deletion functionality.<br>
 ![img_6.png](imgs/img_6.png)
 
 #### (3) Settings
-The Settings section provides UDAS service startup management and other settings management functions.
+The Settings section provides UDAS service startup management and other settings management functions.<br>
 ![img_7.png](imgs/img_7.png)
 
 * UDAS Detector Daemon: Used to start/stop the Detecting service. (Requires sudo privileges)
@@ -119,7 +119,7 @@ The Settings section provides UDAS service startup management and other settings
 
 
 #### (4) Logging
-Displays UDAS log records. You can filter the results by major log levels.
+Displays UDAS log records. You can filter the results by major log levels.<br>
 ![img_8.png](imgs/img_8.png)
 <br>
 

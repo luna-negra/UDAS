@@ -93,18 +93,18 @@ GUI 프로그램은 아래의 네 가지 섹션으로 구분됩니다.<br>
 </div>
 
 #### (1) Main
-Main 섹션은 현재 Blacklist 또는 Whitelist로 등록된 USB 저장 장치의 수량 및, UDAS 관련 서비스 데몬의 상태를 표시합니다.
+Main 섹션은 현재 Blacklist 또는 Whitelist로 등록된 USB 저장 장치의 수량 및, UDAS 관련 서비스 데몬의 상태를 표시합니다.<br>
 ![img_4.png](imgs/img_4.png)
 
-* UDAS 관련 서비스 데몬은 Detector와 Listener가 존재하며, 두 서비스 중 하나라도 동작하지 않으면 실시간으로 USB 저장 장치 감지가 불가능합니다.
+* UDAS 관련 서비스 데몬은 Detector와 Listener가 존재하며, 두 서비스 중 하나라도 동작하지 않으면 실시간으로 USB 저장 장치 감지가 불가능합니다.<br>
 ![img_5.png](imgs/img_5.png)
 
 #### (2) Management
-Management 섹션은 Blacklist 또는 Whitelist로 등록된 USB 저장 장치의 목록 표시 및 삭제 기능을 제공합니다.
+Management 섹션은 Blacklist 또는 Whitelist로 등록된 USB 저장 장치의 목록 표시 및 삭제 기능을 제공합니다.<br>
 ![img_6.png](imgs/img_6.png)
 
 #### (3) Settings
-Settings 섹션은 UDAS 서비스 기동 관리 및 기타 설정 관리 기능을 제공합니다.
+Settings 섹션은 UDAS 서비스 기동 관리 및 기타 설정 관리 기능을 제공합니다.<br>
 ![img_7.png](imgs/img_7.png)
 
 * UDAS Detector Daemon: Detecting 서비스의 기동 / 정지 시 사용합니다. (sudo 권한 필요)
@@ -115,7 +115,7 @@ Settings 섹션은 UDAS 서비스 기동 관리 및 기타 설정 관리 기능�
 * UDAS Log level: 로그 레벨을 변경합니다. (sudo 권한 필요)
 
 #### (4) Logging
-UDAS 로그 기록을 표시합니다. 주요 로그 레벨을 필터링하여 결과를 확인할 수 있습니다.
+UDAS 로그 기록을 표시합니다. 주요 로그 레벨을 필터링하여 결과를 확인할 수 있습니다.<br>
 ![img_8.png](imgs/img_8.png)
 <br>
 

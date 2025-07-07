@@ -74,10 +74,10 @@ sudo dpkg -i udas-0.0.0-amd64.deb
 
 ![img_1.png](imgs/img_1.png)
 
-* GUI画面で「Main > サービス稼働状況」を確認します。
+* GUI画面で「Main > サービス稼働状況」を確認します。<br>
 ![img_2.png](imgs/img_2.png)
 
-* UDAS Detector および UDAS Listener サービスが稼働中の場合、PCにUSBストレージデバイスを接続すると、ホワイトリスト登録の確認メッセージウィンドウが表示されます。
+* UDAS Detector および UDAS Listener サービスが稼働中の場合、PCにUSBストレージデバイスを接続すると、ホワイトリスト登録の確認メッセージウィンドウが表示されます。<br>
 ![img_3.png](imgs/img_3.png)
 
 ### 4. 使用方法
@@ -93,18 +93,18 @@ GUIプログラムは以下の4つのセクションに分かれています。<
 </div>
 
 #### (1) Main
-Main セクションは、現在ブラックリストまたはホワイトリストに登録されているUSBストレージデバイスの数と、UDAS関連サービスデーモンの状態を表示します。
+Main セクションは、現在ブラックリストまたはホワイトリストに登録されているUSBストレージデバイスの数と、UDAS関連サービスデーモンの状態を表示します。<br>
 ![img_4.png](imgs/img_4.png)
 
-* UDAS関連サービスデーモンにはDetectorとListenerがあり、どちらか一方でも動作していない場合、USBストレージデバイスのリアルタイム検出はできません
+* UDAS関連サービスデーモンにはDetectorとListenerがあり、どちらか一方でも動作していない場合、USBストレージデバイスのリアルタイム検出はできません。<br>
 ![img_5.png](imgs/img_5.png)
 
 #### (2) Management
-Management セクションは、ブラックリストまたはホワイトリストに登録されているUSBストレージデバイスのリスト表示と削除機能を提供します。
+Management セクションは、ブラックリストまたはホワイトリストに登録されているUSBストレージデバイスのリスト表示と削除機能を提供します。<br>
 ![img_6.png](imgs/img_6.png)
 
 #### (3) Settings
-Settings セクションは、UDASサービスの起動管理およびその他の設定管理機能を提供します。
+Settings セクションは、UDASサービスの起動管理およびその他の設定管理機能を提供します。<br>
 ![img_7.png](imgs/img_7.png)
 
 * UDAS Detector Daemon: Detectingサービスの起動/停止時に使用します。（sudo権限が必要）
@@ -115,7 +115,7 @@ Settings セクションは、UDASサービスの起動管理およびその他�
 * UDAS Log level: ログレベルを変更します。（sudo権限が必要）
 
 #### (4) Logging
-UDASのログ記録を表示します。主要なログレベルで結果をフィルタリングして確認できます。
+UDASのログ記録を表示します。主要なログレベルで結果をフィルタリングして確認できます。<br>
 ![img_8.png](imgs/img_8.png)
 <br>
 

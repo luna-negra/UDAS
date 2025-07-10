@@ -192,7 +192,7 @@ def remove_registered_usb_info(id_vendor: str,
     product = product if product != "N/A" else "Unknown"
     blacklist = "blacklist" if blacklist else "whitelist"
 
-    command: str = f"pkexec udas td remove {blacklist} --idVendor={id_vendor} --idProduct={id_product} --serial={serial} --manufacturer={manufacturer} --product={product}"
+    command: str = f"pkexec udas td remove {blacklist} --idVendor={id_vendor} --idProduct={id_product} --serial={serial} --manufacturer=\"{manufacturer}\" --product=\"{product}\""
     return run(args=command, stdout=PIPE, stderr=PIPE, shell=True)
 
 

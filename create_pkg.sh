@@ -418,6 +418,7 @@ create_rule_files () {
     done
 
   echo "ACTION==\"add\", SUBSYSTEM==\"block\", ENV{UDISKS_IGNORE}!=\"0\", ENV{UDISKS_IGNORE}=\"1\"" > $UDEV_RULE_FOLDER/${RULE_FILE_LIST[2]}
+  echo "ACTION==\"add\", SUBSYSTEM==\"usb\", ENV{UDISKS_IGNORE}!=\"0\", ENV{UDISKS_IGNORE}=\"1\"" > $UDEV_RULE_FOLDER/${RULE_FILE_LIST[2]}
 }
 
 # create udev rule folder

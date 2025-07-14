@@ -1,0 +1,38 @@
+#!/bin/bash
+
+disable_daemon () {
+  systemctl disable udas.service 2> /dev/null
+  if [[ ! "$SUDO_USER" ]]; then
+    systemctl disable udas_listener.service 2> /dev/null
+  fi
+}
+
+stop_daemon () {
+  systemctl stop udas.service 2> /dev/null
+  if [[ ! "$SUDO_USER" ]]; then
+    systemctl stop udas_listener.service 2> /dev/null
+  fi
+}
+
+remove_userfile () {
+    if [ -d /home/$SUDO_USER/udas ] && [[ "$SUDO_USER" ]] ; then
+		  rm -rf /home/$SUDO_USER/udas/
+		  rm -rf /home/$SUDO_USER/.config/systemd/user/user_listener.service
+    fi
+}
+
+main() 
+{
+    stop_daemon
+    disable_daemon
+    remove_userfile
+
+    if [[ "$SUDO_USER" ]]; then
+      echo "[INFO] Please disable, stop and remove user daemon file."
+      echo "  - command1: systemctl --user stop udas_listener.service"
+      echo "  - command2: systemctl --user disable udas_listener.service"
+      echo "  - command3: rm ~/.config/systemd/user/udas_listener.service"
+    fi
+}
+
+main

@@ -382,8 +382,8 @@ class MainWindow(QMainWindow):
             return None
 
         row: int = table.currentRow()
-        manufacturer, id_vendor = [text.strip("()") for text in selected_item[0].text().split()]
-        product, id_product = [text.strip("()") for text in selected_item[1].text().split()]
+        manufacturer, id_vendor = [text.strip("()") for text in selected_item[0].text().split(" (")]
+        product, id_product = [text.strip("()") for text in selected_item[1].text().split(" (")]
         serial = selected_item[2].text()
 
         cmd_result = remove_registered_usb_info(id_vendor=id_vendor,

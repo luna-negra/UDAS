@@ -107,6 +107,13 @@ int main(int argc, char argv)
         // subprocess
         if (subprocess_pid == 0)
         {
+            printf("%s\n", *(cmd_args + 0));
+            printf("%s\n", *(cmd_args + 1));
+            printf("%s\n", *(cmd_args + 2));
+            printf("%s\n", *(cmd_args + 3));
+            printf("%s\n", *(cmd_args + 4));                    
+            printf("%s\n", *(cmd_args + 5));
+
             execlp(*(cmd_args + 0), *(cmd_args + 0), *(cmd_args + 1), *(cmd_args + 2), *(cmd_args + 3), *(cmd_args + 4), *(cmd_args + 5), NULL);
             write(client_fd, "[ERROR]Fail to execute udas_alert.", strlen("[ERROR]Fail to execute udas_alert."));
         }

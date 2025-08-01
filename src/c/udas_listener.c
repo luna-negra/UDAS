@@ -113,6 +113,12 @@ int main(int argc, char argv)
             printf("%s\n", *(cmd_args + 3));
             printf("%s\n", *(cmd_args + 4));                    
             printf("%s\n", *(cmd_args + 5));
+            /*write(client_fd, *(cmd_args + 0), strlen(*cmd_args + 0));
+            write(client_fd, *(cmd_args + 1), strlen(*cmd_args + 1));
+            write(client_fd, *(cmd_args + 2), strlen(*cmd_args + 2));
+            write(client_fd, *(cmd_args + 3), strlen(*cmd_args + 3));
+            write(client_fd, *(cmd_args + 4), strlen(*cmd_args + 4));
+            write(client_fd, *(cmd_args + 5), strlen(*cmd_args + 5));*/
 
             execlp(*(cmd_args + 0), *(cmd_args + 0), *(cmd_args + 1), *(cmd_args + 2), *(cmd_args + 3), *(cmd_args + 4), *(cmd_args + 5), NULL);
             write(client_fd, "[ERROR]Fail to execute udas_alert.", strlen("[ERROR]Fail to execute udas_alert."));

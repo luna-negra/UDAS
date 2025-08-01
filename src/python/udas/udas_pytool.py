@@ -164,19 +164,29 @@ def get_detector_status() -> dict:
     run_result = run("systemctl status udas | head -n 3 | tail -n 1", stdout=PIPE, stderr=PIPE, shell=True)
     if run_result.returncode == 0:
         tmp = run_result.stdout.decode(ENCODING).split()
-        ret_value["is_running"] = f"{tmp[2].strip('()')} ({tmp[1]})"
-        ret_value["start_dt"] = f"{tmp[5]} {tmp[6]} {tmp[7].strip(';')}"
-        ret_value["uptime"] = f"{tmp[-3]} {tmp[-2]}" if "h" in tmp[-3] or "m" in tmp[-3] else f"{tmp[-2]}"
+        try:
+            ret_value["is_running"] = f"{tmp[2].strip('()')} ({tmp[1]})"
+            ret_value["start_dt"] = f"{tmp[5]} {tmp[6]} {tmp[7].strip(';')}"
+            ret_value["uptime"] = f"{tmp[-3]} {tmp[-2]}" if "h" in tmp[-3] or "m" in tmp[-3] else f"{tmp[-2]}"
+
+        except IndexError:
+            pass
+
     return ret_value
 
 def get_listener_status() -> dict:
     ret_value = {"is_running": "ERROR", "start_dt": "ERROR", "uptime": "ERROR"}
     run_result = run("systemctl --user status udas_listener | head -n 3 | tail -n 1", stdout=PIPE, stderr=PIPE, shell=True)
     if run_result.returncode == 0:
-        tmp = run_result.stdout.decode(ENCODING).split()
-        ret_value["is_running"] = f"{tmp[2].strip('()')} ({tmp[1]})"
-        ret_value["start_dt"] = f"{tmp[5]} {tmp[6]} {tmp[7].strip(';')}"
-        ret_value["uptime"] = f"{tmp[-3]} {tmp[-2]}" if "h" in tmp[-3] or "m" in tmp[-3] else f"{tmp[-2]}"
+        try:
+            tmp = run_result.stdout.decode(ENCODING).split()
+            ret_value["is_running"] = f"{tmp[2].strip('()')} ({tmp[1]})"
+            ret_value["start_dt"] = f"{tmp[5]} {tmp[6]} {tmp[7].strip(';')}"
+            ret_value["uptime"] = f"{tmp[-3]} {tmp[-2]}" if "h" in tmp[-3] or "m" in tmp[-3] else f"{tmp[-2]}"
+
+        except IndexError:
+            pass
+
     return ret_value
 
 def remove_registered_usb_info(id_vendor: str,

@@ -3,7 +3,7 @@
 
 # set global vars
 PKG_NAME="udas"
-PKG_VERSION="0.0-0"
+PKG_VERSION="0.0-1"
 PKG_ARCHITECTURE="amd64"
 PKG_FOLDER=$PKG_NAME-$PKG_VERSION-$PKG_ARCHITECTURE
 CONFIG_FOLDER=$PKG_FOLDER/etc/udas/config
@@ -191,9 +191,11 @@ compile_python_source () {
     if [ $? -ne 0 ]; then
       echo -e "\e[1;32mOK\e[0;0m"
       echo -e "\e[1;31m\n[ERROR] Fail to compile 'udas-gui'.\n\e[0;0m"
+      cd ../..
       exit 1
     else
       echo -e "\e[1;32mOK\e[0;0m"
+      cd ../..
     fi
 
     return 0
@@ -417,8 +419,8 @@ create_rule_files () {
       echo -e "\e[1;32mOK\e[0;0m"
     done
 
-  echo "ACTION==\"add\", SUBSYSTEM==\"block\", ENV{UDISKS_IGNORE}!=\"0\", ENV{UDISKS_IGNORE}=\"1\"" > $UDEV_RULE_FOLDER/${RULE_FILE_LIST[2]}
   echo "ACTION==\"add\", SUBSYSTEM==\"usb\", ENV{UDISKS_IGNORE}!=\"0\", ENV{UDISKS_IGNORE}=\"1\"" > $UDEV_RULE_FOLDER/${RULE_FILE_LIST[2]}
+  echo "ACTION==\"add\", SUBSYSTEM==\"block\", ENV{UDISKS_IGNORE}!=\"0\", ENV{UDISKS_IGNORE}=\"1\"" >> $UDEV_RULE_FOLDER/${RULE_FILE_LIST[2]}
 }
 
 # create udev rule folder
@@ -463,6 +465,29 @@ install_requirements () {
     echo -e "\e[1;31mFailed\e[0;0m"
     echo -e "\e[1;31m[ERROR] Fail to install requirements.txt in src/python.\e[0;0m"
     exit 1
+  else
+    echo -e "\e[1;32mOK\e[0;0m"
+  fi
+}
+
+# remove unnecessary folders and files after creating deb package
+remove_supplements () {
+  echo "* Removing supplements"
+
+  # remove build folder
+  rm -rf src/python/build
+  echo -n " - python build folder: "
+  if [ -d src/python/build ]; then
+    echo -e "\e[1;31mFailed\e[0;0m"
+  else
+    echo -e "\e[1;32mOK\e[0;0m"
+  fi
+
+  # remove spec files
+  rm -f src/python/*.spec
+  echo -n " - python spec files: "
+  if [ -f src/python/udas_alert.spec ] || [ -f src/python/udas_gui.spec ]; then
+    echo -e "\e[1;31mFailed\e[0;0m"
   else
     echo -e "\e[1;32mOK\e[0;0m"
   fi
@@ -527,6 +552,9 @@ main () {
   echo "[Take Off]"
   compile_c_source
   compile_python_source
+
+  echo ""
+  remove_supplements
 
   echo ""
   echo "COMPLETE Process"
